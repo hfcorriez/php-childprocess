@@ -223,7 +223,7 @@ class ChildProcess extends EventEmitter
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                $this->emit('shutdown');
+                $this->emit('exit');
                 break;
             case SIGQUIT:
                 $this->emit('quit');
@@ -234,8 +234,6 @@ class ChildProcess extends EventEmitter
                     self::$children[$pid]->emit('exit', $status);
                 }
                 break;
-            default:
-                echo 'abc: ' . $signal;
         }
     }
 }
