@@ -12,6 +12,8 @@
 
 ### Current Process
 
+    Current process handle
+
 ```php
 declare(ticks = 1) ;
 
@@ -28,6 +30,8 @@ while(1) {
 ```
 
 ### Parallel Work
+
+    Run the callable function in parallel child process space
 
 ```php
 declare(ticks = 1) ;
@@ -49,7 +53,9 @@ while(1) {
 }
 ```
 
-### Send message to child or parent
+### Send message
+
+    Message communicate between parent process and child process
 
 ```php
 declare(ticks = 1) ;
@@ -71,6 +77,32 @@ $child->on('message', function ($msg) {
 });
 
 $child->send('hi child');
+
+while (1) {
+    // to do some thing
+}
+```
+
+### Spawn the command
+
+    Run the command in child process
+
+```php
+declare(ticks = 1) ;
+
+$process = new ChildProcess();
+
+$child = $process->spawn('ls');
+
+$child->on('stdout', function ($data) {
+    error_log('receive stdout data: '  . $data);
+    // to save data or process it
+});
+
+$child->on('stderr', function ($data) {
+    error_log('receive stderr data: '  . $data);
+    // to save data or process something
+});
 
 while (1) {
     // to do some thing
