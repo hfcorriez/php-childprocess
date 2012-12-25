@@ -6,11 +6,20 @@ declare(ticks = 1) ;
 
 class Process extends EventEmitter
 {
+    /**
+     * @var int Pid of this process
+     */
     public $pid;
+
+    /**
+     * @var int Exit code of this process
+     */
     public $status;
 
+    /**
+     * @var resource MsgQueue for send to
+     */
     public $queue;
-    public $receive_queue;
 
     /**
      * Init
@@ -56,7 +65,6 @@ class Process extends EventEmitter
     public function send($msg)
     {
         if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
-            echo 'send ' . PHP_EOL;
             return msg_send($this->queue, 1, $msg, true, false, $error);
         }
         return false;
@@ -73,6 +81,12 @@ class Process extends EventEmitter
         return posix_kill($this->pid, $signal);
     }
 
+    /**
+     * Cover the event register to handle message register
+     *
+     * @param array|string $event
+     * @param callable     $listener
+     */
     public function on($event, \Closure $listener)
     {
         parent::on($event, $listener);
@@ -81,6 +95,14 @@ class Process extends EventEmitter
             // Automatic start listener when message event create
             $this->startListener();
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public function isExit()
+    {
+        return $this->status !== null;
     }
 
     /**

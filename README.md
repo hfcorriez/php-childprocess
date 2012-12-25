@@ -2,6 +2,12 @@
 
     This is a library for PHPer to handle Child Process easy and simple. That's it.
 
+## Dependency
+
+- php5.3+
+- pcntl
+- posix
+
 ## Examples
 
 ### Current Process
@@ -28,7 +34,7 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->parallel(function (Process $process) {
+$child = $process->parallel(function () {
     // to do something
     sleep(10);
     error_log('child execute');

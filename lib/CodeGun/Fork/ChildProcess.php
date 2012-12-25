@@ -6,15 +6,24 @@ declare(ticks = 1) ;
 
 class ChildProcess extends EventEmitter
 {
+    /**
+     * @var int pid of Current process
+     */
     public $pid;
 
+    /**
+     * @var Process
+     */
     protected $process;
 
     /**
      * @var Process[]
      */
-    protected $children;
+    protected static $children;
 
+    /**
+     * Init
+     */
     public function __construct()
     {
         $this->pid = posix_getpid();
@@ -24,7 +33,6 @@ class ChildProcess extends EventEmitter
 
     /**
      * Attempt to fork a child process from the parent to run a job in.
-     *
      *
      * @param callable $callback
      * @return Process
@@ -36,8 +44,8 @@ class ChildProcess extends EventEmitter
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child worker.');
         } else if ($pid) {
-            $this->children[$pid] = new Process($pid);
-            return $this->children[$pid];
+            self::$children[$pid] = new Process($pid);
+            return self::$children[$pid];
         } else {
             if (is_callable($callback)) {
                 call_user_func_array($callback, array($this->process));
@@ -51,17 +59,9 @@ class ChildProcess extends EventEmitter
     /**
      * Register signal handlers that a worker should respond to.
      *
-     * TERM: Shutdown immediately and stop processing jobs.
-     * INT: Shutdown immediately and stop processing jobs.
-     * QUIT: Shutdown after the current job finishes processing.
-     * USR1: Kill the forked child immediately and continue processing jobs.
      */
     protected function registerSigHandlers()
     {
-        if (!function_exists('pcntl_signal')) {
-            return;
-        }
-
         pcntl_signal(SIGTERM, array($this, 'signalHandler'));
         pcntl_signal(SIGINT, array($this, 'signalHandler'));
         pcntl_signal(SIGQUIT, array($this, 'signalHandler'));
@@ -90,8 +90,8 @@ class ChildProcess extends EventEmitter
                 break;
             case SIGCHLD:
                 while (($pid = pcntl_wait($status)) > 0) {
-                    $this->children[$pid]->emit('exit', $status);
-                    $this->children[$pid]->status = $status;
+                    self::$children[$pid]->emit('exit', $status);
+                    self::$children[$pid]->status = $status;
                 }
         }
     }
