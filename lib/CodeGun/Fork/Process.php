@@ -27,7 +27,6 @@ class Process extends EventEmitter
     public function __construct($pid)
     {
         $this->pid = $pid;
-        $this->queue = msg_get_queue($pid);
     }
 
     /**
@@ -50,7 +49,7 @@ class Process extends EventEmitter
             }
         });
 
-        register_shutdown_function(function () use ($queue) {
+        $this->on('exit', function () use ($queue) {
             msg_remove_queue($queue);
         });
         return $this;
@@ -64,6 +63,9 @@ class Process extends EventEmitter
      */
     public function send($msg)
     {
+        if (!$this->queue) {
+            $this->queue = msg_get_queue($this->pid);
+        }
         if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
             return msg_send($this->queue, 1, $msg, true, false, $error);
         }
