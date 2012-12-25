@@ -22,6 +22,16 @@ class ChildProcess extends EventEmitter
     protected static $children;
 
     /**
+     * @var array Default options for child process
+     */
+    protected static $default_options = array(
+        'cwd'     => false,
+        'user'    => false,
+        'env'     => array(),
+        'timeout' => 0
+    );
+
+    /**
      * Init
      */
     public function __construct()
@@ -60,11 +70,15 @@ class ChildProcess extends EventEmitter
      * Spawn the command
      *
      * @param string $cmd
-     * @return Process
+     * @param array  $options
      * @throws \RuntimeException
+     * @return Process
      */
-    public function spawn($cmd)
+    public function spawn($cmd, array $options = array())
     {
+        // Merge options
+        $options = $options + self::$default_options;
+
         $guid = uniqid();
 
         $files = array(
@@ -73,23 +87,40 @@ class ChildProcess extends EventEmitter
             "/tmp/$guid.err",
         );
 
+        $user = false;
+        // Check user can be changed?
+        if ($options['user'] && posix_getuid() > 0) {
+            // Not root
+            throw new \RuntimeException('Only root can change user to spwan the process');
+        }
+
+        // Check user if exists?
+        if ($options['user'] && !($user = posix_getpwnam($options['user']))) {
+            throw new \RuntimeException('Can not look up user: ' . $options['user']);
+        }
+
         // Make pipes
         foreach ($files as $file) {
             posix_mkfifo($file, 0666);
+            // Check if need to change user
+            if ($user) {
+                // Change owner to changed user
+                chown($file, $user['name']);
+            }
         }
 
         $pid = pcntl_fork();
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
+            // Save process
+            self::$children[$pid] = $child = new Process($pid);
+
             // Make file descriptor
             $pipes = array();
             foreach ($files as $i => $file) {
                 $pipes[] = fopen($file, $i > 0 ? 'r' : 'w');
             }
-
-            // Save process
-            self::$children[$pid] = $child = new Process($pid);
 
             // Remove file when exit
             $child->on('exit', function () use (&$files, &$pipes) {
@@ -123,6 +154,24 @@ class ChildProcess extends EventEmitter
         } else {
             $pipes = array();
 
+            // Process options
+            if ($options['cwd'] && !chroot($options['cwd'])) {
+                throw new \RuntimeException('Can change work dir to ' . $options['cwd']);
+            }
+
+            // User to be change
+            if ($user) {
+                posix_setgid($user['gid']);
+                posix_setuid($user['uid']);
+            }
+
+            // Env set
+            if ($options['env']) {
+                foreach ($options['evn'] as $k => $v) {
+                    putenv($k . '=' . $v);
+                }
+            }
+
             // Make file descriptors for proc_open()
             $fd = array();
             foreach ($files as $i => $file) {
@@ -130,10 +179,10 @@ class ChildProcess extends EventEmitter
             }
 
             // Open pipe to run process
-            $resource = proc_open($cmd, $fd, $pipes);
+            $resource = proc_open($cmd, $fd, $pipes, $options['cwd']);
 
             if (!is_resource($resource)) {
-                throw new \RuntimeException('Can not run ' . $cmd . ' using pipe open');
+                throw new \RuntimeException('Can not run "' . $cmd . '" using pipe open');
             }
 
             // Close all pipes
@@ -184,6 +233,9 @@ class ChildProcess extends EventEmitter
                     self::$children[$pid]->status = $status;
                     self::$children[$pid]->emit('exit', $status);
                 }
+                break;
+            default:
+                echo 'abc: ' . $signal;
         }
     }
 }
