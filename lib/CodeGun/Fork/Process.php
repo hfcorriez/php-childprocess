@@ -7,6 +7,11 @@ declare(ticks = 1) ;
 class Process extends EventEmitter
 {
     /**
+     * @var int Pid of parent process
+     */
+    public $ppid;
+
+    /**
      * @var int Pid of this process
      */
     public $pid;
@@ -24,9 +29,10 @@ class Process extends EventEmitter
     /**
      * Init
      */
-    public function __construct($pid)
+    public function __construct($pid, $ppid)
     {
         $this->pid = $pid;
+        $this->ppid = $ppid;
 
         $_queue = $this->queue = msg_get_queue($pid);
 

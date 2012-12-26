@@ -7,11 +7,6 @@ declare(ticks = 1) ;
 class ChildProcess extends Process
 {
     /**
-     * @var int pid of Current process
-     */
-    public $pid;
-
-    /**
      * @var Process
      */
     protected $process;
@@ -36,7 +31,8 @@ class ChildProcess extends Process
      */
     public function __construct()
     {
-        parent::__construct(posix_getpid());
+        $pid = posix_getpid();
+        parent::__construct($pid, $pid);
         $this->registerSigHandlers();
         $this->registerShutdownHandlers();
     }
@@ -62,7 +58,7 @@ class ChildProcess extends Process
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save child process and return
-            return self::$children[$pid] = new Process($pid);
+            return self::$children[$pid] = new Process($pid, $this->pid);
         } else {
             if (is_callable($call)) {
                 // Process options
@@ -126,7 +122,7 @@ class ChildProcess extends Process
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save process
-            self::$children[$pid] = $child = new Process($pid);
+            self::$children[$pid] = $child = new Process($pid, $this->pid);
 
             // Make file descriptor
             $pipes = array();
