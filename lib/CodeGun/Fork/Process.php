@@ -17,9 +17,9 @@ class Process extends EventEmitter
     public $status;
 
     /**
-     * @var resource MsgQueue for send to
+     * @var resource
      */
-    public $queue;
+    protected $queue;
 
     /**
      * Init
@@ -27,20 +27,30 @@ class Process extends EventEmitter
     public function __construct($pid)
     {
         $this->pid = $pid;
+
+        $_queue = $this->queue = msg_get_queue($pid);
+
+        $this->on('exit', function () use ($_queue) {
+            msg_remove_queue($_queue);
+        });
     }
 
     /**
-     * Listen the queue
+     * Listen message send to current process
      *
      * @return Process
      */
     public function startListener()
     {
-        $queue = msg_get_queue(posix_getpid());
+        $current_pid = posix_getpid();
+        $queue = false;
+        if (msg_queue_exists($current_pid)) {
+            $queue = msg_get_queue($current_pid);
+        }
         $that = $this;
 
         register_tick_function(function () use ($that, $queue) {
-            if (!is_resource($queue) || !msg_stat_queue($queue)) {
+            if (!$queue || !is_resource($queue) || !msg_stat_queue($queue)) {
                 return;
             }
 
@@ -49,9 +59,6 @@ class Process extends EventEmitter
             }
         });
 
-        $this->on('exit', function () use ($queue) {
-            msg_remove_queue($queue);
-        });
         return $this;
     }
 
@@ -63,9 +70,7 @@ class Process extends EventEmitter
      */
     public function send($msg)
     {
-        if (!$this->queue) {
-            $this->queue = msg_get_queue($this->pid);
-        }
+        // Check queue and send messages
         if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
             return msg_send($this->queue, 1, $msg, true, false, $error);
         }

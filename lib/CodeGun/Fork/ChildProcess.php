@@ -4,7 +4,7 @@ namespace CodeGun\Fork;
 
 declare(ticks = 1) ;
 
-class ChildProcess extends EventEmitter
+class ChildProcess extends Process
 {
     /**
      * @var int pid of Current process
@@ -36,19 +36,18 @@ class ChildProcess extends EventEmitter
      */
     public function __construct()
     {
-        $this->pid = posix_getpid();
-        $this->process = new Process($this->pid);
+        parent::__construct(posix_getpid());
         $this->registerSigHandlers();
     }
 
     /**
      * Attempt to fork a child process from the parent to run a job in.
      *
-     * @param callable $callback
+     * @param callable $call
      * @return Process
      * @throws \RuntimeException
      */
-    public function parallel($callback)
+    public function fork($call)
     {
         $pid = pcntl_fork();
         if ($pid === -1) {
@@ -57,8 +56,11 @@ class ChildProcess extends EventEmitter
             self::$children[$pid] = new Process($pid);
             return self::$children[$pid];
         } else {
-            if (is_callable($callback)) {
-                call_user_func_array($callback, array($this->process));
+            if (is_callable($call)) {
+                call_user_func_array($call, array($this));
+            } else if (is_string($call) && is_file($call)) {
+                $process = $this;
+                include($call);
             } else {
                 throw new \RuntimeException('Only callable can be run in parallel space');
             }
