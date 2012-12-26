@@ -60,16 +60,13 @@ class ChildProcess extends Process
             // Save child process and return
             return self::$children[$pid] = new Process($pid, $this->pid);
         } else {
-            if (is_callable($call)) {
-                // Process options
-                $this->childProcessOptions($options);
+            // Child initialize
+            $this->childInitialize($options);
 
+            if (is_callable($call)) {
                 // Support callable
                 call_user_func_array($call, array($this));
             } else if (is_string($call) && is_file($call)) {
-                // Process options
-                $this->childProcessOptions($options);
-
                 // Support PHP file
                 $process = $this;
                 include($call);
@@ -160,7 +157,8 @@ class ChildProcess extends Process
 
             return $child;
         } else {
-            $this->childProcessOptions($options);
+            // Child initialize
+            $this->childInitialize($options);
 
             $pipes = array();
 
@@ -186,6 +184,42 @@ class ChildProcess extends Process
             exit;
         }
 
+    }
+
+    /**
+     * Init child process
+     *
+     * @param array $options
+     */
+    protected function childInitialize(array $options)
+    {
+        $this->ppid = $this->pid;
+        $this->pid = posix_getpid();
+
+        $this->childProcessOptions($options);
+    }
+
+    /**
+     * Process options in child
+     *
+     * @param $options
+     */
+    protected function childProcessOptions($options)
+    {
+        // Process options
+        if ($options['cwd']) {
+            $this->processChangeUser($options['cwd']);
+        }
+
+        // User to be change
+        if ($options['user']) {
+            $this->processChangeUser($options['user']);
+        }
+
+        // Env set
+        if ($options['env']) {
+            $this->processChangeEnv($options['env']);
+        }
     }
 
     /**
@@ -247,29 +281,6 @@ class ChildProcess extends Process
         if (is_array($user) || ($user = $this->tryChangeUser($user))) {
             posix_setgid($user['gid']);
             posix_setuid($user['uid']);
-        }
-    }
-
-    /**
-     * Process options in child
-     *
-     * @param $options
-     */
-    protected function childProcessOptions($options)
-    {
-        // Process options
-        if ($options['cwd']) {
-            $this->processChangeUser($options['cwd']);
-        }
-
-        // User to be change
-        if ($options['user']) {
-            $this->processChangeUser($options['user']);
-        }
-
-        // Env set
-        if ($options['env']) {
-            $this->processChangeEnv($options['env']);
         }
     }
 
