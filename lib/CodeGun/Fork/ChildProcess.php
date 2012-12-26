@@ -45,21 +45,36 @@ class ChildProcess extends Process
      * Attempt to fork a child process from the parent to run a job in.
      *
      * @param callable $call
-     * @return Process
+     * @param array    $options
      * @throws \RuntimeException
+     * @return Process
      */
-    public function fork($call)
+    public function fork($call, $options = array())
     {
+        // Merge options
+        $options = $this->getOptions($options);
+
+        // Fork
         $pid = pcntl_fork();
+
+        // Parallel works
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
-            self::$children[$pid] = new Process($pid);
-            return self::$children[$pid];
+            // Save child process and return
+            return self::$children[$pid] = new Process($pid);
         } else {
             if (is_callable($call)) {
+                // Process options
+                $this->childProcessOptions($options);
+
+                // Support callable
                 call_user_func_array($call, array($this));
             } else if (is_string($call) && is_file($call)) {
+                // Process options
+                $this->childProcessOptions($options);
+
+                // Support PHP file
                 $process = $this;
                 include($call);
             } else {
@@ -80,7 +95,7 @@ class ChildProcess extends Process
     public function spawn($cmd, array $options = array())
     {
         // Merge options
-        $options = $options + self::$default_options;
+        $options = $this->getOptions($options);
 
         $guid = uniqid();
 
@@ -90,17 +105,8 @@ class ChildProcess extends Process
             "/tmp/$guid.err",
         );
 
-        $user = false;
-        // Check user can be changed?
-        if ($options['user'] && posix_getuid() > 0) {
-            // Not root
-            throw new \RuntimeException('Only root can change user to spwan the process');
-        }
-
-        // Check user if exists?
-        if ($options['user'] && !($user = posix_getpwnam($options['user']))) {
-            throw new \RuntimeException('Can not look up user: ' . $options['user']);
-        }
+        // Get can be changed user
+        $options['user'] = $user = $options['user'] ? $this->tryChangeUser($options['user']) : false;
 
         // Make pipes
         foreach ($files as $file) {
@@ -112,7 +118,10 @@ class ChildProcess extends Process
             }
         }
 
+        // Fork
         $pid = pcntl_fork();
+
+        // Parallel works
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
@@ -155,25 +164,9 @@ class ChildProcess extends Process
 
             return $child;
         } else {
+            $this->childProcessOptions($options);
+
             $pipes = array();
-
-            // Process options
-            if ($options['cwd'] && !chroot($options['cwd'])) {
-                throw new \RuntimeException('Can change work dir to ' . $options['cwd']);
-            }
-
-            // User to be change
-            if ($user) {
-                posix_setgid($user['gid']);
-                posix_setuid($user['uid']);
-            }
-
-            // Env set
-            if ($options['env']) {
-                foreach ($options['evn'] as $k => $v) {
-                    putenv($k . '=' . $v);
-                }
-            }
 
             // Make file descriptors for proc_open()
             $fd = array();
@@ -200,6 +193,102 @@ class ChildProcess extends Process
     }
 
     /**
+     * Try to change user
+     *
+     * @param string $user
+     * @return array|bool
+     * @throws \RuntimeException
+     */
+    protected function tryChangeUser($user)
+    {
+        $changed_user = false;
+        // Check user can be changed?
+        if ($user && posix_getuid() > 0) {
+            // Not root
+            throw new \RuntimeException('Only root can change user to spwan the process');
+        }
+
+        // Check user if exists?
+        if ($user && !($changed_user = posix_getpwnam($user))) {
+            throw new \RuntimeException('Can not look up user: ' . $user);
+        }
+
+        return $changed_user;
+    }
+
+    /**
+     * Process change env
+     *
+     * @param array $env
+     */
+    protected function processChangeEnv(array $env)
+    {
+        foreach ($env as $k => $v) {
+            putenv($k . '=' . $v);
+        }
+    }
+
+    /**
+     * Try to change CWD
+     *
+     * @param string $cwd
+     * @throws \RuntimeException
+     */
+    protected function processChangeCWD($cwd)
+    {
+        if ($cwd && !chroot($cwd)) {
+            throw new \RuntimeException('Can change work dir to ' . $cwd);
+        }
+    }
+
+    /**
+     * Process change user
+     *
+     * @param string $user
+     */
+    protected function processChangeUser($user)
+    {
+        if (is_array($user) || ($user = $this->tryChangeUser($user))) {
+            posix_setgid($user['gid']);
+            posix_setuid($user['uid']);
+        }
+    }
+
+    /**
+     * Process options in child
+     *
+     * @param $options
+     */
+    protected function childProcessOptions($options)
+    {
+        // Process options
+        if ($options['cwd']) {
+            $this->processChangeUser($options['cwd']);
+        }
+
+        // User to be change
+        if ($options['user']) {
+            $this->processChangeUser($options['user']);
+        }
+
+        // Env set
+        if ($options['env']) {
+            $this->processChangeEnv($options['env']);
+        }
+    }
+
+    /**
+     * Get options
+     *
+     * @param array $options
+     * @return array
+     */
+    protected function getOptions($options = array())
+    {
+        return $options + self::$default_options;
+    }
+
+    /**
      * Register signal handlers that a worker should respond to.
      *
      */
@@ -222,10 +311,10 @@ class ChildProcess extends Process
      */
     public function signalHandler($signal)
     {
-        $this->emit($signal);
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
+                $this->status = 0;
                 $this->emit('exit');
                 exit;
                 break;
