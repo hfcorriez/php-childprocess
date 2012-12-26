@@ -38,6 +38,7 @@ class ChildProcess extends Process
     {
         parent::__construct(posix_getpid());
         $this->registerSigHandlers();
+        $this->registerShutdownHandlers();
     }
 
     /**
@@ -226,6 +227,7 @@ class ChildProcess extends Process
             case SIGTERM:
             case SIGINT:
                 $this->emit('exit');
+                exit;
                 break;
             case SIGQUIT:
                 $this->emit('quit');
@@ -237,5 +239,23 @@ class ChildProcess extends Process
                 }
                 break;
         }
+    }
+
+    /**
+     * Shutdown handlers
+     */
+    protected function registerShutdownHandlers()
+    {
+        $that = $this;
+        register_shutdown_function(function () use ($that) {
+            if (!$that->isExit()) {
+                if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
+                    $that->emit('exit', 1);
+                } else {
+                    $that->emit('exit', 0);
+                }
+            }
+            $that->emit('shutdown');
+        });
     }
 }
