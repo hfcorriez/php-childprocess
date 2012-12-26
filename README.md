@@ -2,7 +2,7 @@
 
     This is a library for PHPer to handle Child Process easy and simple. That's it.
 
-## Dependency
+## Dependencies
 
 - php5.3+
 - pcntl
@@ -19,8 +19,8 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$process->on(SIGINT, function () use ($process) {
-    error_log('shutdown');
+$process->on('exit', function () use ($process) {
+    error_log('exit');
     exit;
 });
 
@@ -29,7 +29,7 @@ while(1) {
 }
 ```
 
-### Parallel Work
+### Parallel Works (Using callable)
 
     Run the callable function in parallel child process space
 
@@ -38,11 +38,31 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->parallel(function () {
+$child = $process->fork(function () {
     // to do something
     sleep(10);
     error_log('child execute');
 });
+
+$child->on('exit', function ($status) {
+    error_log('child exit ' . $status);
+});
+
+while(1) {
+    // to do something
+}
+```
+
+### Parallel Works (Using PHP file)
+
+    Run the PHP file in parallel child process space
+
+```php
+declare(ticks = 1) ;
+
+$process = new ChildProcess();
+
+$child = $process->fork(__DIR__ . '/worker.php');
 
 $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
@@ -62,7 +82,7 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->parallel(function (Process $process) {
+$child = $process->fork(function (Process $process) {
     $process->on('message', function ($msg) {
         error_log('child revive message: ' . $msg);
     });
