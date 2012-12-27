@@ -49,13 +49,24 @@ class EventEmitter
     }
 
     /**
+     * Alias for removeListener
+     *
+     * @param string   $event
+     * @param callable $listener
+     */
+    public function off($event, \Closure $listener)
+    {
+        $this->removeListener($event, $listener);
+    }
+
+    /**
      * Detach a event listener
      *
      * @static
      * @param string   $event
      * @param \Closure $listener
      */
-    public function off($event, \Closure $listener)
+    public function removeListener($event, \Closure $listener)
     {
         $event = strtolower($event);
         if (!empty($this->listeners[$event])) {
@@ -65,6 +76,38 @@ class EventEmitter
                 unset($this->listeners[$event][$key]);
             }
         }
+    }
+
+    /**
+     * Remove all listeners of given event
+     *
+     * @param string $event
+     */
+    public function removeAllListeners($event)
+    {
+        $this->listeners[$event] = array();
+    }
+
+    /**
+     * Remove all of all listeners
+     */
+    public function removeAllOfAllListeners()
+    {
+        $this->listeners = array();
+    }
+
+    /**
+     * Get listeners of given event
+     *
+     * @param string $event
+     * @return array
+     */
+    public function listeners($event)
+    {
+        if (!empty($this->listeners[$event])) {
+            return $this->listeners[$event];
+        }
+        return array();
     }
 
     /**
