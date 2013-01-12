@@ -373,8 +373,7 @@ class ChildProcess extends EventEmitter
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                $this->process->status = 0;
-                $this->emit('exit');
+                $this->shutdown();
                 exit;
                 break;
             case SIGQUIT:
@@ -390,20 +389,27 @@ class ChildProcess extends EventEmitter
     }
 
     /**
+     * Shutdown
+     */
+    public function shutdown($status = 0)
+    {
+        if (!$this->process->isExit()) {
+            $this->process->status = $status;
+            $this->emit('exit', $status);
+        }
+    }
+
+    /**
      * Shutdown handlers
      */
     protected function registerShutdownHandlers()
     {
         $that = $this;
         register_shutdown_function(function () use ($that) {
-            if (!$that->process->status) {
-                if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
-                    $that->process->status = 1;
-                    $that->emit('exit', 1);
-                } else {
-                    $that->process->status = 0;
-                    $that->emit('exit', 0);
-                }
+            if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
+                $that->shutdown(1);
+            } else {
+                $that->shutdown();
             }
         });
     }
