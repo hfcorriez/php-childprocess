@@ -4,22 +4,47 @@ namespace CodeGun\Fork;
 
 declare(ticks = 1) ;
 
-class ChildProcess extends Process
+class ChildProcess extends EventEmitter
 {
+    /**
+     * @var int
+     */
+    public $pid;
+
+    /**
+     * @var int
+     */
+    public $ppid;
+
+    /**
+     * @var bool If master process?
+     */
+    protected $master = true;
+
+    /**
+     * @var resource
+     */
+    protected $queue;
+
+    /**
+     * @var bool Is prepared?
+     */
+    protected $prepared = true;
+
     /**
      * @var Process
      */
-    protected $process;
+    public $process;
 
     /**
      * @var Process[]
      */
-    protected static $children;
+    public $children;
 
     /**
      * @var array Default options for child process
      */
-    protected static $default_options = array(
+    protected $default_options = array(
         'cwd'     => false,
         'user'    => false,
         'env'     => array(),
@@ -31,10 +56,11 @@ class ChildProcess extends Process
      */
     public function __construct()
     {
-        $pid = posix_getpid();
-        parent::__construct($pid, $pid);
+        $this->ppid = $this->pid = posix_getpid();
+        $this->process = new Process($this, $this->pid, $this->ppid, true);
         $this->registerSigHandlers();
         $this->registerShutdownHandlers();
+        $this->registerTickHandlers();
     }
 
     /**
@@ -45,11 +71,8 @@ class ChildProcess extends Process
      * @throws \RuntimeException
      * @return Process
      */
-    public function fork($call, $options = array())
+    public function fork($call, array $options = array())
     {
-        // Merge options
-        $options = $this->getOptions($options);
-
         // Fork
         $pid = pcntl_fork();
 
@@ -58,17 +81,17 @@ class ChildProcess extends Process
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save child process and return
-            return self::$children[$pid] = new Process($pid, $this->pid);
+            return $this->children[$pid] = new Process($this, $pid, $this->pid);
         } else {
             // Child initialize
             $this->childInitialize($options);
 
             if (is_callable($call)) {
                 // Support callable
-                call_user_func_array($call, array($this));
+                call_user_func_array($call, array($this->process));
             } else if (is_string($call) && is_file($call)) {
                 // Support PHP file
-                $process = $this;
+                $process = $this->process;
                 include($call);
             } else {
                 throw new \RuntimeException('Only callable can be run in parallel space');
@@ -87,9 +110,6 @@ class ChildProcess extends Process
      */
     public function spawn($cmd, array $options = array())
     {
-        // Merge options
-        $options = $this->getOptions($options);
-
         $guid = uniqid();
 
         $files = array(
@@ -98,8 +118,11 @@ class ChildProcess extends Process
             "/tmp/$guid.err",
         );
 
+        $user = false;
         // Get can be changed user
-        $options['user'] = $user = $options['user'] ? $this->tryChangeUser($options['user']) : false;
+        if (!empty($options['user'])) {
+            $options['user'] = $user = $this->tryChangeUser($options['user']);
+        }
 
         // Make pipes
         foreach ($files as $file) {
@@ -119,7 +142,7 @@ class ChildProcess extends Process
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save process
-            self::$children[$pid] = $child = new Process($pid, $this->pid);
+            $this->children[$pid] = $child = new Process($this, $pid, $this->pid);
 
             // Make file descriptor
             $pipes = array();
@@ -187,14 +210,41 @@ class ChildProcess extends Process
     }
 
     /**
+     * If master process?
+     *
+     * @return bool
+     */
+    public function isMaster()
+    {
+        return $this->master;
+    }
+
+    /**
+     * Register message listener
+     */
+    public function listen()
+    {
+        $this->queue = msg_get_queue($this->pid);
+    }
+
+    /**
      * Init child process
      *
      * @param array $options
      */
-    protected function childInitialize(array $options)
+    protected function childInitialize(array $options = array())
     {
+        $this->prepared = false;
+        $this->master = false;
+        $pid = posix_getpid();
         $this->ppid = $this->pid;
-        $this->pid = posix_getpid();
+        $this->pid = $pid;
+        $this->queue = null;
+        $this->process = new Process($this, $this->pid, $this->ppid, false);
+        $this->children = array();
+        $this->prepared = true;
+
+        $options = $options + $this->default_options;
 
         $this->childProcessOptions($options);
     }
@@ -290,10 +340,11 @@ class ChildProcess extends Process
      * @param array $options
      * @return array
      */
-    protected function getOptions($options = array())
+    protected function getOptions(array $options = array())
     {
-        return $options + self::$default_options;
+        return $options + $this->default_options;
     }
+
 
     /**
      * Register signal handlers that a worker should respond to.
@@ -318,10 +369,11 @@ class ChildProcess extends Process
      */
     public function signalHandler($signal)
     {
+        $this->emit($signal);
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                $this->status = 0;
+                $this->process->status = 0;
                 $this->emit('exit');
                 exit;
                 break;
@@ -330,8 +382,8 @@ class ChildProcess extends Process
                 break;
             case SIGCHLD:
                 while (($pid = pcntl_wait($status)) > 0) {
-                    self::$children[$pid]->status = $status;
-                    self::$children[$pid]->emit('exit', $status);
+                    $this->children[$pid]->status = $status;
+                    $this->children[$pid]->emit('exit', $status);
                 }
                 break;
         }
@@ -344,14 +396,59 @@ class ChildProcess extends Process
     {
         $that = $this;
         register_shutdown_function(function () use ($that) {
-            if (!$that->isExit()) {
+            if (!$that->process->status) {
                 if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
+                    $that->process->status = 1;
                     $that->emit('exit', 1);
                 } else {
+                    $that->process->status = 0;
                     $that->emit('exit', 0);
                 }
             }
-            $that->emit('shutdown');
+        });
+    }
+
+    /**
+     * Register tick handlers
+     */
+    protected function registerTickHandlers()
+    {
+        $that = $this;
+        register_tick_function(function () use ($that) {
+            if (!$that->prepared) {
+                return;
+            }
+
+            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
+                return;
+            }
+
+            while (msg_receive($that->queue, 1, $null, 1024, $msg, true, MSG_IPC_NOWAIT, $error)) {
+                if (!is_array($msg) || empty($msg['to']) || $msg['to'] != $that->pid) {
+                    $that->emit('unknown_message', $msg);
+                } else {
+                    if ($that->master) {
+                        if ($process = $that->children[$msg['from']]) {
+                            $process->emit('message', $msg['body']);
+                        } else {
+                            $that->emit('unknown_message', $msg);
+                        }
+                    } else if ($msg['from'] == $that->ppid) {
+                        // Come from parent process
+                        $that->process->emit('message', $msg['body']);
+                    }
+                }
+            }
+
+            $that->emit('tick');
+        });
+
+        $this->on('exit', function () use ($that) {
+            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
+                return;
+            }
+
+            msg_remove_queue($that->queue);
         });
     }
 }

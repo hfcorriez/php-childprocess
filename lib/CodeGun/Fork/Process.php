@@ -22,50 +22,54 @@ class Process extends EventEmitter
     public $status;
 
     /**
+     * @var ChildProcess
+     */
+    public $child_process;
+
+    /**
      * @var resource
      */
     protected $queue;
 
     /**
+     * @var bool If master?
+     */
+    protected $master = true;
+
+    /**
+     * @var bool
+     */
+    protected $prepared = false;
+
+    /**
+     * @var bool
+     */
+    protected $listened = false;
+
+    /**
      * Init
      */
-    public function __construct($pid, $ppid)
+    public function __construct(ChildProcess $child_process, $pid, $ppid, $master = true)
     {
         $this->pid = $pid;
         $this->ppid = $ppid;
+        $this->master = $master;
+        $this->child_process = $child_process;
 
-        $_queue = $this->queue = msg_get_queue($pid);
-
-        $this->on('exit', function () use ($_queue) {
-            msg_remove_queue($_queue);
-        });
-    }
-
-    /**
-     * Listen message send to current process
-     *
-     * @return Process
-     */
-    public function startListener()
-    {
-        $current_pid = posix_getpid();
-        $queue = false;
-        if (msg_queue_exists($current_pid)) {
-            $queue = msg_get_queue($current_pid);
-        }
         $that = $this;
+        $this->child_process->on('tick', function () use ($that) {
+            if ($that->queue) return;
+            if (!msg_queue_exists($that->pid)) return;
 
-        register_tick_function(function () use ($that, $queue) {
-            if (!$queue || !is_resource($queue) || !msg_stat_queue($queue)) {
-                return;
+            if ($that->master) {
+                $that->queue = msg_get_queue($that->pid);
+            } else {
+                $that->queue = msg_get_queue($that->ppid);
             }
 
-            if (msg_receive($queue, 1, $null, 1024, $msg, true, MSG_IPC_NOWAIT, $error)) {
-                $that->emit('message', $msg);
-            }
+            $that->emit('listen');
+            $that->listened = true;
         });
-
-        return $this;
     }
 
     /**
@@ -78,7 +82,11 @@ class Process extends EventEmitter
     {
         // Check queue and send messages
         if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
-            return msg_send($this->queue, 1, $msg, true, false, $error);
+            return msg_send($this->queue, 1, array(
+                'from' => $this->master ? $this->ppid : $this->pid,
+                'to'   => $this->master ? $this->pid : $this->ppid,
+                'body' => $msg
+            ), true, false, $error);
         }
         return false;
     }
@@ -95,27 +103,41 @@ class Process extends EventEmitter
     }
 
     /**
-     * Cover the event register to handle message register
-     *
-     * @param array|string $event
-     * @param callable     $listener
-     */
-    public function on($event, \Closure $listener)
-    {
-        parent::on($event, $listener);
-
-        if ($event == 'message') {
-            // Automatic start listener when message event create
-            $this->startListener();
-        }
-    }
-
-    /**
      * @return bool
      */
     public function isExit()
     {
         return $this->status !== null;
+    }
+
+    /**
+     * If master?
+     *
+     * @return bool
+     */
+    public function isMaster()
+    {
+        return $this->master;
+    }
+
+    /**
+     * Is prepared to receive?
+     *
+     * @return bool
+     */
+    public function isPrepared()
+    {
+        return $this->prepared;
+    }
+
+    /**
+     * Is listened?
+     *
+     * @return bool
+     */
+    public function isListened()
+    {
+        return $this->listened;
     }
 
     /**
