@@ -270,6 +270,11 @@ class ChildProcess extends EventEmitter
         if ($options['env']) {
             $this->processChangeEnv($options['env']);
         }
+
+        // Env set
+        if ($options['timeout']) {
+            $this->processSetTimeout($options['timeout']);
+        }
     }
 
     /**
@@ -294,6 +299,20 @@ class ChildProcess extends EventEmitter
         }
 
         return $changed_user;
+    }
+
+    /**
+     * Try to set timeout
+     *
+     * @param int $timeout
+     */
+    protected function processSetTimeout($timeout)
+    {
+        $start_time = time();
+        $that = $this;
+        $this->on('tick', function () use ($timeout, $start_time, $that) {
+            if ($start_time + $timeout < time()) $that->shutdown(1);
+        });
     }
 
     /**
