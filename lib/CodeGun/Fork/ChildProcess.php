@@ -206,7 +206,44 @@ class ChildProcess extends EventEmitter
             proc_close($resource);
             exit;
         }
+    }
 
+    /**
+     * Make the process daemonize
+     *
+     * @return ChildProcess
+     * @throws \RuntimeException
+     */
+    public function daemonize()
+    {
+        $pid = pcntl_fork();
+
+        if ($pid === -1) {
+            throw new \RuntimeException('Unable to fork child process.');
+        } else if ($pid) {
+            exit;
+        }
+
+        // Make sub process as session leader
+        posix_setsid();
+
+        if ($pid === -1) {
+            throw new \RuntimeException('Unable to fork child process.');
+        } else if ($pid) {
+            exit;
+        }
+
+        // Prepare the resource
+        $this->prepared = false;
+        $pid = posix_getpid();
+        $this->ppid = $this->pid;
+        $this->pid = $pid;
+        $this->queue = null;
+        $this->process = new Process($this, $this->pid, $this->ppid, false);
+        $this->children = array();
+        $this->prepared = true;
+
+        return $this;
     }
 
     /**
