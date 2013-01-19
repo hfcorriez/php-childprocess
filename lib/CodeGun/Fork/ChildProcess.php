@@ -32,6 +32,13 @@ class ChildProcess extends EventEmitter
     protected $prepared = true;
 
     /**
+     * @var array Options for child process
+     */
+    protected $options = array(
+        'default_signal_handler' => true
+    );
+
+    /**
      * @var Process
      */
     public $process;
@@ -44,7 +51,7 @@ class ChildProcess extends EventEmitter
     /**
      * @var array Default options for child process
      */
-    protected $default_options = array(
+    protected $default_child_options = array(
         'cwd'     => false,
         'user'    => false,
         'env'     => array(),
@@ -54,8 +61,12 @@ class ChildProcess extends EventEmitter
     /**
      * Init
      */
-    public function __construct()
+    public function __construct(array $options = array())
     {
+        // Save options
+        $this->options = $options + $this->options;
+
+        // Prepare resource and data
         $this->ppid = $this->pid = posix_getpid();
         $this->process = new Process($this, $this->pid, $this->ppid, true);
         $this->registerSigHandlers();
@@ -307,7 +318,7 @@ class ChildProcess extends EventEmitter
         $this->children = array();
         $this->prepared = true;
 
-        $options = $options + $this->default_options;
+        $options = $options + $this->default_child_options;
 
         $this->childProcessOptions($options);
     }
@@ -424,13 +435,11 @@ class ChildProcess extends EventEmitter
      */
     protected function getOptions(array $options = array())
     {
-        return $options + $this->default_options;
+        return $options + $this->default_child_options;
     }
-
 
     /**
      * Register signal handlers that a worker should respond to.
-     *
      */
     protected function registerSigHandlers()
     {
@@ -447,11 +456,25 @@ class ChildProcess extends EventEmitter
     /**
      * Control signals
      *
-     * @param $signal
+     * @param int $signal
      */
     public function signalHandler($signal)
     {
         $this->emit($signal);
+
+        // Default signal process
+        if ($this->options['default_signal_handler']) {
+            $this->signalHandlerDefault($signal);
+        }
+    }
+
+    /**
+     * Default signal handler
+     *
+     * @param int $signal
+     */
+    protected function signalHandlerDefault($signal)
+    {
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
