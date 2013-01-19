@@ -64,14 +64,14 @@ class ChildProcess extends EventEmitter
     }
 
     /**
-     * Attempt to fork a child process from the parent to run a job in.
+     * Run the closure in parallel space
      *
-     * @param callable $call
+     * @param callable $closure
      * @param array    $options
      * @throws \RuntimeException
      * @return Process
      */
-    public function fork($call, array $options = array())
+    public function parallel(\Closure $closure, array $options = array())
     {
         // Fork
         $pid = pcntl_fork();
@@ -86,15 +86,41 @@ class ChildProcess extends EventEmitter
             // Child initialize
             $this->childInitialize($options);
 
-            if (is_callable($call)) {
-                // Support callable
-                call_user_func_array($call, array($this->process));
-            } else if (is_string($call) && is_file($call)) {
-                // Support PHP file
+            // Support callable
+            call_user_func($closure, $this->process);
+            exit;
+        }
+    }
+
+    /**
+     * Attempt to fork a child process from the parent to run a job in.
+     *
+     * @param string $file
+     * @param array  $options
+     * @throws \RuntimeException
+     * @return Process
+     */
+    public function fork($file, array $options = array())
+    {
+        // Fork
+        $pid = pcntl_fork();
+
+        // Parallel works
+        if ($pid === -1) {
+            throw new \RuntimeException('Unable to fork child process.');
+        } else if ($pid) {
+            // Save child process and return
+            return $this->children[$pid] = new Process($this, $pid, $this->pid);
+        } else {
+            // Child initialize
+            $this->childInitialize($options);
+
+            // Check file
+            if (is_string($file) && is_file($file)) {
                 $process = $this->process;
-                include($call);
+                include($file);
             } else {
-                throw new \RuntimeException('Only callable can be run in parallel space');
+                throw new \RuntimeException('The file to fork is not exists: ' . $file);
             }
             exit;
         }

@@ -29,7 +29,7 @@ while(1) {
 }
 ```
 
-### Parallel Works (Using callable)
+### Parallel Works
 
     Run the callable function in parallel child process space
 
@@ -38,7 +38,7 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->fork(function () {
+$child = $process->parallel(function () {
     // to do something
     sleep(10);
     error_log('child execute');
@@ -53,9 +53,11 @@ while(1) {
 }
 ```
 
-### Parallel Works (Using PHP file)
+### Fork with the PHP file
 
     Run the PHP file in parallel child process space
+
+The Master:
 
 ```php
 declare(ticks = 1) ;
@@ -71,6 +73,14 @@ $child->on('exit', function ($status) {
 while(1) {
     // to do something
 }
+```
+
+The Fork PHP file:
+
+```php
+$process->send('hello master');
+
+// Some thing to do in child process
 ```
 
 ### Send message
