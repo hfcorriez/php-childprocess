@@ -12,7 +12,8 @@
   "require": {
     "php": ">=5.3.0",
     "ext-pcntl": "*",
-    "ext-posix": "*"
+    "ext-posix": "*",
+    "pagon/eventemitter": "*"
   },
   "require-dev": {
     "ext-sysvmsg": "*"
