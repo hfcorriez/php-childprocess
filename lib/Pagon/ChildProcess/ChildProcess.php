@@ -4,7 +4,7 @@ namespace Pagon\ChildProcess;
 
 use Pagon\EventEmitter\EventEmitter;
 
-declare(ticks = 1) ;
+declare(ticks = 1);
 
 class ChildProcess extends EventEmitter
 {
@@ -21,17 +21,17 @@ class ChildProcess extends EventEmitter
     /**
      * @var bool If master process?
      */
-    protected $master = true;
+    public $master = true;
 
     /**
      * @var resource
      */
-    protected $queue;
+    public $queue;
 
     /**
      * @var bool Is prepared?
      */
-    protected $prepared = true;
+    public $prepared = true;
 
     /**
      * @var array Options for child process
@@ -192,16 +192,7 @@ class ChildProcess extends EventEmitter
                 $pipes[] = fopen($file, $i > 0 ? 'r' : 'w');
             }
 
-            // Remove file when exit
-            $child->on('exit', function () use (&$files, &$pipes) {
-                foreach ($files as $file) {
-                    unlink($file);
-                }
-                $files = $pipes = array();
-            });
-
-            // Register tick function to check streams
-            register_tick_function(function () use ($pipes, $child) {
+            $tick = function () use ($pipes, $child) {
                 $readers = $pipes;
 
                 // Select the streams
@@ -218,6 +209,19 @@ class ChildProcess extends EventEmitter
                         $child->emit($events[$index], $_buffer);
                     }
                 }
+            };
+
+            // Register tick function to check streams
+            $this->on('tick', $tick);
+
+            // Remove file when exit
+            $that = $this;
+            $child->on('exit', function () use ($tick, $that, &$files, &$pipes) {
+                $that->removeListener('tick', $tick);
+                foreach ($files as $file) {
+                    unlink($file);
+                }
+                $files = $pipes = array();
             });
 
             return $child;
