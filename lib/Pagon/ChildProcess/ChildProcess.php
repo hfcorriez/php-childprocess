@@ -155,6 +155,9 @@ class ChildProcess extends EventEmitter
             "/tmp/$guid.err",
         );
 
+        // Get options
+        $options = $this->getOptions($options);
+
         $user = false;
         // Get can be changed user
         if (!empty($options['user'])) {
