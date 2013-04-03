@@ -2,6 +2,8 @@
 
 namespace Pagon\ChildProcess;
 
+use Pagon\EventEmitter\EventEmitter;
+
 declare(ticks = 1) ;
 
 class Process extends EventEmitter
