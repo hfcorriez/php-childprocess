@@ -1,0 +1,25 @@
+{
+  "name": "pagon/childprocess",
+  "description": "PHP child process manager",
+  "keywords": ["childprocess", "process", "pcntl"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Corrie Zhao",
+      "email": "hfcorriez@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.0",
+    "ext-pcntl": "*",
+    "ext-posix": "*"
+  },
+  "require-dev": {
+    "ext-sysvmsg": "*"
+  },
+  "autoload": {
+    "psr-0": {
+      "Pagon\\ChildProcess": "lib/"
+    }
+  }
+}

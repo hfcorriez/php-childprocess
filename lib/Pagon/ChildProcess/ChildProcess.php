@@ -1,6 +1,6 @@
 <?php
 
-namespace CodeGun\Fork;
+namespace Pagon\ChildProcess;
 
 declare(ticks = 1) ;
 
