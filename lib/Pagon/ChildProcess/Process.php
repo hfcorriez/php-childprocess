@@ -82,7 +82,8 @@ class Process extends EventEmitter
         }
 
         $that = $this;
-        $this->child_process->on('tick', function () use ($that) {
+
+        $tick = function () use ($that) {
             if ($that->queue) return;
             if (!msg_queue_exists($that->pid)) return;
 
@@ -94,6 +95,12 @@ class Process extends EventEmitter
 
             $that->emit('listen');
             $that->listened = true;
+        };
+
+        $this->child_process->on('tick', $tick);
+
+        $this->on('exit', function () use ($that, $tick) {
+            $that->child_process->removeListener('tick', $tick);
         });
         return $this;
     }
