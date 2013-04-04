@@ -129,6 +129,17 @@ class Process extends EventEmitter
     }
 
     /**
+     * Shutdown
+     *
+     * @param int $status
+     */
+    public function shutdown($status = 0)
+    {
+        $this->status = $status;
+        $this->emit('exit', $status);
+    }
+
+    /**
      * @return bool
      */
     public function isExit()

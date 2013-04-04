@@ -549,6 +549,13 @@ class ChildProcess extends EventEmitter
             case SIGTERM:
             case SIGINT:
                 $this->shutdown();
+                // Check children
+                foreach ($this->children as $child) {
+                    if ($child->isExit()) continue;
+
+                    $child->kill(SIGINT);
+                    $child->shutdown(1);
+                }
                 exit;
                 break;
             case SIGQUIT:
@@ -561,8 +568,7 @@ class ChildProcess extends EventEmitter
                         break;
                     }
 
-                    $this->children[$pid]->status = $status;
-                    $this->children[$pid]->emit('exit', $status);
+                    $this->children[$pid]->shutdown($status);
                 }
                 break;
         }
