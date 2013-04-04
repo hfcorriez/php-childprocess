@@ -354,11 +354,13 @@ class ChildProcess extends EventEmitter
     public function clear($process)
     {
         if ($process instanceof Process) {
-            if (($index = array_search($process, $this->children)) >= 0) {
+            if (($index = array_search($process, $this->children)) !== false) {
+                $this->children[$index]->__destruct();
                 unset($this->children[$index]);
             }
         } elseif (is_numeric($process)) {
             if (isset($this->children[$process])) {
+                $this->children[$process]->__destruct();
                 unset($this->children[$process]);
             }
         } else {
@@ -567,7 +569,7 @@ class ChildProcess extends EventEmitter
                     }
 
                     $this->children[$pid]->shutdown($status);
-                    unset($this->children[$pid]);
+                    $this->clear($pid);
                 }
                 break;
         }

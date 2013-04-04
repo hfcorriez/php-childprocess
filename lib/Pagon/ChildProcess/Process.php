@@ -195,4 +195,12 @@ class Process extends EventEmitter
     {
         return $this->pid;
     }
+
+    /**
+     * Userland solution for memory leak
+     */
+    function __destruct()
+    {
+        unset($this->manager, $this->listeners);
+    }
 }
