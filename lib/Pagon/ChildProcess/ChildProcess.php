@@ -273,7 +273,7 @@ class ChildProcess extends EventEmitter
             }
 
             // Open pipe to run process
-            $resource = proc_open($cmd, $fd, $pipes, $options['cwd']);
+            $resource = proc_open($cmd, $fd, $pipes, $options['cwd'], $options['env']);
 
             if (!is_resource($resource)) {
                 throw new \RuntimeException('Can not run "' . $cmd . '" using pipe open');
