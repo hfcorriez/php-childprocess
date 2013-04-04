@@ -31,22 +31,22 @@ class Process extends EventEmitter
     /**
      * @var resource
      */
-    protected $queue;
+    public $queue;
 
     /**
      * @var bool If master?
      */
-    protected $master = true;
+    public $master = true;
 
     /**
      * @var bool
      */
-    protected $prepared = false;
+    public $prepared = false;
 
     /**
      * @var bool
      */
-    protected $listened = false;
+    public $listened = false;
 
     /**
      * Init

@@ -54,10 +54,11 @@ class ChildProcess extends EventEmitter
      * @var array Default options for child process
      */
     protected $default_child_options = array(
-        'cwd'     => false,
-        'user'    => false,
-        'env'     => array(),
-        'timeout' => 0
+        'cwd'      => false,
+        'user'     => false,
+        'env'      => array(),
+        'timeout'  => 0,
+        'callback' => false
     );
 
     /**
@@ -358,6 +359,11 @@ class ChildProcess extends EventEmitter
         if ($options['timeout']) {
             $this->processSetTimeout($options['timeout']);
         }
+
+        // Support callback
+        if ($options['callback'] instanceof \Closure) {
+            $options['callback']($this);
+        }
     }
 
     /**
@@ -494,7 +500,12 @@ class ChildProcess extends EventEmitter
                 $this->emit('quit');
                 break;
             case SIGCHLD:
-                while (($pid = pcntl_wait($status)) > 0) {
+                while ($pid = pcntl_wait($status, WNOHANG)) {
+                    if ($pid === -1) {
+                        pcntl_signal_dispatch();
+                        break;
+                    }
+
                     $this->children[$pid]->status = $status;
                     $this->children[$pid]->emit('exit', $status);
                 }
