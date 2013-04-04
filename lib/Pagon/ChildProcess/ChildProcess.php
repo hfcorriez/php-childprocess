@@ -173,14 +173,19 @@ class ChildProcess extends EventEmitter
     {
         $guid = uniqid();
 
-        $files = array(
-            "/tmp/$guid.in",
-            "/tmp/$guid.out",
-            "/tmp/$guid.err",
-        );
-
         // Get options
         $options = $this->getOptions($options);
+
+        $dir = '/tmp';
+        if (!empty($options['dir'])) {
+            $dir = $options['dir'];
+        }
+
+        $files = array(
+            "$dir/$guid.in.pipe",
+            "$dir/$guid.ou.pipe",
+            "$dir/$guid.er.pipe",
+        );
 
         $user = false;
         // Get can be changed user
