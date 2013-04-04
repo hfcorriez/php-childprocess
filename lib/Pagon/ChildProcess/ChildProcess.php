@@ -48,7 +48,7 @@ class ChildProcess extends EventEmitter
     /**
      * @var Process[]
      */
-    public $children;
+    public $children = array();
 
     /**
      * @var array Default options for child process
