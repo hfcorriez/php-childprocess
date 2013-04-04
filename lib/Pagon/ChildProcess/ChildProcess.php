@@ -551,10 +551,7 @@ class ChildProcess extends EventEmitter
                 $this->shutdown();
                 // Check children
                 foreach ($this->children as $child) {
-                    if ($child->isExit()) continue;
-
                     $child->kill(SIGINT);
-                    $child->shutdown(1);
                 }
                 exit;
                 break;
@@ -580,6 +577,10 @@ class ChildProcess extends EventEmitter
     public function shutdown($status = 0)
     {
         if (!$this->process->isExit()) {
+            // Check children
+            foreach ($this->children as $child) {
+                $child->shutdown($status);
+            }
             $this->process->status = $status;
             $this->emit('exit', $status);
         }
