@@ -566,6 +566,7 @@ class ChildProcess extends EventEmitter
                     }
 
                     $this->children[$pid]->shutdown($status);
+                    unset($this->children[$pid]);
                 }
                 break;
         }
