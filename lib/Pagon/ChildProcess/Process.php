@@ -61,14 +61,26 @@ class Process extends EventEmitter
         $this->ppid = $ppid;
         $this->master = $master;
         $this->child_process = $child_process;
+
+        if ($this->pid) {
+            // If pid exists, init directly
+            $this->init($pid);
+        }
     }
 
     /**
      * Init
      */
-    public function init($pid)
+    public function init($pid = null)
     {
-        $this->pid = $pid;
+        if ($pid) {
+            $this->pid = $pid;
+        }
+
+        if (!$this->pid) {
+            throw new \RuntimeException('Process has not set pid');
+        }
+
         $that = $this;
         $this->child_process->on('tick', function () use ($that) {
             if ($that->queue) return;
