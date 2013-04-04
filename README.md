@@ -7,6 +7,7 @@
 - php5.3+
 - pcntl
 - posix
+- [pagon/eventemitter](https://github.com/hfcorriez/php-eventemitter)
 
 ## Examples
 
