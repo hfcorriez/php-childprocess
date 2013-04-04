@@ -37,7 +37,7 @@ class ChildProcess extends EventEmitter
      * @var array Options for child process
      */
     protected $options = array(
-        'default_signal_handler' => true
+        'signal_handler' => true
     );
 
     /**
@@ -507,7 +507,7 @@ class ChildProcess extends EventEmitter
         $this->emit($signal);
 
         // Default signal process
-        if ($this->options['default_signal_handler']) {
+        if ($this->options['signal_handler']) {
             $this->signalHandlerDefault($signal);
         }
     }
