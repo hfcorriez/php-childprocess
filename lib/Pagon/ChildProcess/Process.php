@@ -26,7 +26,7 @@ class Process extends EventEmitter
     /**
      * @var ChildProcess
      */
-    public $child_process;
+    public $manager;
 
     /**
      * @var resource
@@ -60,7 +60,7 @@ class Process extends EventEmitter
         $this->pid = $pid;
         $this->ppid = $ppid;
         $this->master = $master;
-        $this->child_process = $child_process;
+        $this->manager = $child_process;
 
         if ($this->pid) {
             // If pid exists, init directly
@@ -97,10 +97,10 @@ class Process extends EventEmitter
             $that->listened = true;
         };
 
-        $this->child_process->on('tick', $tick);
+        $this->manager->on('tick', $tick);
 
         $this->on('exit', function () use ($that, $tick) {
-            $that->child_process->removeListener('tick', $tick);
+            $that->manager->removeListener('tick', $tick);
         });
         return $this;
     }
