@@ -341,6 +341,27 @@ class ChildProcess extends EventEmitter
     }
 
     /**
+     * Clear children
+     *
+     * @param Process|int $process
+     * @throws \InvalidArgumentException
+     */
+    public function clear($process)
+    {
+        if ($process instanceof Process) {
+            if (($index = array_search($process, $this->children)) >= 0) {
+                unset($this->children[$index]);
+            }
+        } elseif (is_numeric($process)) {
+            if (isset($this->children[$process])) {
+                unset($this->children[$process]);
+            }
+        } else {
+            throw new \InvalidArgumentException("Illegal argument");
+        }
+    }
+
+    /**
      * Init child process
      *
      * @param array $options
