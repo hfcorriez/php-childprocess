@@ -4,7 +4,7 @@ namespace Pagon\ChildProcess;
 
 use Pagon\EventEmitter\EventEmitter;
 
-declare(ticks = 1) ;
+declare(ticks = 1);
 
 class Process extends EventEmitter
 {
@@ -48,8 +48,12 @@ class Process extends EventEmitter
      */
     public $listened = false;
 
+
     /**
-     * Init
+     * @param ChildProcess $child_process
+     * @param int          $pid
+     * @param int          $ppid
+     * @param bool         $master
      */
     public function __construct(ChildProcess $child_process, $pid, $ppid, $master = true)
     {
@@ -57,7 +61,14 @@ class Process extends EventEmitter
         $this->ppid = $ppid;
         $this->master = $master;
         $this->child_process = $child_process;
+    }
 
+    /**
+     * Init
+     */
+    public function init($pid)
+    {
+        $this->pid = $pid;
         $that = $this;
         $this->child_process->on('tick', function () use ($that) {
             if ($that->queue) return;
@@ -72,6 +83,7 @@ class Process extends EventEmitter
             $that->emit('listen');
             $that->listened = true;
         });
+        return $this;
     }
 
     /**

@@ -58,6 +58,7 @@ class ChildProcess extends EventEmitter
         'user'     => false,
         'env'      => array(),
         'timeout'  => 0,
+        'init'     => false,
         'callback' => false
     );
 
@@ -87,6 +88,16 @@ class ChildProcess extends EventEmitter
      */
     public function parallel(\Closure $closure, array $options = array())
     {
+        $options = $this->getOptions($options);
+
+        // Build new child
+        $child = new Process($this, null, $this->pid);
+
+        // Process init
+        if ($options['init'] instanceof \Closure) {
+            $options['init']($child);
+        }
+
         // Fork
         $pid = pcntl_fork();
 
@@ -95,7 +106,7 @@ class ChildProcess extends EventEmitter
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save child process and return
-            return $this->children[$pid] = new Process($this, $pid, $this->pid);
+            return $this->children[$pid] = $child->init($pid);
         } else {
             // Child initialize
             $this->childInitialize($options);
@@ -116,6 +127,16 @@ class ChildProcess extends EventEmitter
      */
     public function fork($file, array $options = array())
     {
+        $options = $this->getOptions($options);
+
+        // Build new child
+        $child = new Process($this, null, $this->pid);
+
+        // Process init
+        if ($options['init'] instanceof \Closure) {
+            $options['init']($child);
+        }
+
         // Fork
         $pid = pcntl_fork();
 
@@ -124,7 +145,7 @@ class ChildProcess extends EventEmitter
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save child process and return
-            return $this->children[$pid] = new Process($this, $pid, $this->pid);
+            return $this->children[$pid] = $child->init($pid);
         } else {
             // Child initialize
             $this->childInitialize($options);
@@ -134,7 +155,7 @@ class ChildProcess extends EventEmitter
                 $process = $this->process;
                 include($file);
             } else {
-                throw new \RuntimeException('The file to fork is not exists: ' . $file);
+                throw new \RuntimeException('Bad file');
             }
             exit;
         }
@@ -177,6 +198,14 @@ class ChildProcess extends EventEmitter
             }
         }
 
+        // Build new child
+        $child = new Process($this, null, $this->pid);
+
+        // Process init
+        if ($options['init'] instanceof \Closure) {
+            $options['init']($child);
+        }
+
         // Fork
         $pid = pcntl_fork();
 
@@ -185,7 +214,7 @@ class ChildProcess extends EventEmitter
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
             // Save process
-            $this->children[$pid] = $child = new Process($this, $pid, $this->pid);
+            $this->children[$pid] = $child->init($pid);
 
             // Make file descriptor
             $pipes = array();
