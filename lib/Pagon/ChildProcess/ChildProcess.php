@@ -373,6 +373,7 @@ class ChildProcess extends EventEmitter
      */
     protected function childInitialize(array $options = array())
     {
+        $this->removeAllOfAllListeners();
         $this->prepared = false;
         $this->master = false;
         $pid = posix_getpid();
@@ -397,22 +398,22 @@ class ChildProcess extends EventEmitter
     {
         // Process options
         if ($options['cwd']) {
-            $this->processChangeUser($options['cwd']);
+            chdir($options['cwd']);
         }
 
         // User to be change
         if ($options['user']) {
-            $this->processChangeUser($options['user']);
+            $this->childChangeUser($options['user']);
         }
 
         // Env set
         if ($options['env']) {
-            $this->processChangeEnv($options['env']);
+            $this->childChangeEnv($options['env']);
         }
 
         // Env set
         if ($options['timeout']) {
-            $this->processSetTimeout($options['timeout']);
+            $this->childSetTimeout($options['timeout']);
         }
 
         // Support callback
@@ -450,7 +451,7 @@ class ChildProcess extends EventEmitter
      *
      * @param int $timeout
      */
-    protected function processSetTimeout($timeout)
+    protected function childSetTimeout($timeout)
     {
         $start_time = time();
         $that = $this;
@@ -464,7 +465,7 @@ class ChildProcess extends EventEmitter
      *
      * @param array $env
      */
-    protected function processChangeEnv(array $env)
+    protected function childChangeEnv(array $env)
     {
         foreach ($env as $k => $v) {
             putenv($k . '=' . $v);
@@ -489,7 +490,7 @@ class ChildProcess extends EventEmitter
      *
      * @param string $user
      */
-    protected function processChangeUser($user)
+    protected function childChangeUser($user)
     {
         if (is_array($user) || ($user = $this->tryChangeUser($user))) {
             posix_setgid($user['gid']);
@@ -578,11 +579,11 @@ class ChildProcess extends EventEmitter
     public function shutdown($status = 0)
     {
         if (!$this->process->isExit()) {
+            $this->process->status = $status;
             // Check children
             foreach ($this->children as $child) {
                 $child->shutdown($status);
             }
-            $this->process->status = $status;
             $this->emit('exit', $status);
         }
     }
@@ -599,6 +600,12 @@ class ChildProcess extends EventEmitter
             } else {
                 $that->shutdown();
             }
+
+            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
+                return;
+            }
+
+            msg_remove_queue($that->queue);
         });
     }
 
@@ -635,14 +642,6 @@ class ChildProcess extends EventEmitter
             }
 
             $that->emit('tick');
-        });
-
-        $this->on('exit', function () use ($that) {
-            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
-                return;
-            }
-
-            msg_remove_queue($that->queue);
         });
     }
 }
