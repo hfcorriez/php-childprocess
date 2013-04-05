@@ -611,14 +611,16 @@ class ChildProcess extends EventEmitter
                 return;
             }
 
-            while ($pid = pcntl_wait($status, WNOHANG)) {
-                if ($pid === -1) {
-                    pcntl_signal_dispatch();
-                    break;
-                }
+            if ($that->master) {
+                while ($pid = pcntl_wait($status, WNOHANG)) {
+                    if ($pid === -1) {
+                        pcntl_signal_dispatch();
+                        break;
+                    }
 
-                $that->children[$pid]->shutdown($status);
-                $that->clear($pid);
+                    $that->children[$pid]->shutdown($status);
+                    $that->clear($pid);
+                }
             }
 
             if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
