@@ -2,7 +2,7 @@
 
 namespace Pagon\ChildProcess;
 
-use Pagon\EventEmitter\EventEmitter;
+use Pagon\EventEmitter;
 
 declare(ticks = 1);
 
