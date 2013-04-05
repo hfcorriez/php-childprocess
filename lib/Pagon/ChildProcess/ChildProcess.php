@@ -521,9 +521,9 @@ class ChildProcess extends EventEmitter
         pcntl_signal(SIGQUIT, array($this, 'signalHandler'));
         pcntl_signal(SIGUSR1, array($this, 'signalHandler'));
         pcntl_signal(SIGUSR2, array($this, 'signalHandler'));
-        pcntl_signal(SIGCONT, array($this, 'signalHandler'));
-        pcntl_signal(SIGPIPE, array($this, 'signalHandler'));
-        pcntl_signal(SIGCHLD, array($this, 'signalHandler'));
+        //pcntl_signal(SIGCONT, array($this, 'signalHandler'));
+        //pcntl_signal(SIGPIPE, array($this, 'signalHandler'));
+        //pcntl_signal(SIGCHLD, array($this, 'signalHandler'));
     }
 
     /**
@@ -560,17 +560,6 @@ class ChildProcess extends EventEmitter
                 break;
             case SIGQUIT:
                 $this->emit('quit');
-                break;
-            case SIGCHLD:
-                while ($pid = pcntl_wait($status, WNOHANG)) {
-                    if ($pid === -1) {
-                        pcntl_signal_dispatch();
-                        break;
-                    }
-
-                    $this->children[$pid]->shutdown($status);
-                    $this->clear($pid);
-                }
                 break;
         }
     }
@@ -620,6 +609,16 @@ class ChildProcess extends EventEmitter
         register_tick_function(function () use ($that) {
             if (!$that->prepared) {
                 return;
+            }
+
+            while ($pid = pcntl_wait($status, WNOHANG)) {
+                if ($pid === -1) {
+                    pcntl_signal_dispatch();
+                    break;
+                }
+
+                $that->children[$pid]->shutdown($status);
+                $that->clear($pid);
             }
 
             if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
