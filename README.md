@@ -93,7 +93,7 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->fork(function (Process $process) {
+$child = $process->parallel(function (Process $process) {
     $process->on('message', function ($msg) {
         error_log('child revive message: ' . $msg);
     });
