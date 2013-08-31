@@ -81,12 +81,12 @@ class ChildProcess extends EventEmitter
     /**
      * Run the closure in parallel space
      *
-     * @param callable $closure
-     * @param array    $options
+     * @param callable       $closure
+     * @param array|\Closure $options
      * @throws \RuntimeException
      * @return Process
      */
-    public function parallel(\Closure $closure, array $options = array())
+    public function parallel(\Closure $closure, $options = array())
     {
         $options = $this->getOptions($options);
 
@@ -120,12 +120,12 @@ class ChildProcess extends EventEmitter
     /**
      * Attempt to fork a child process from the parent to run a job in.
      *
-     * @param string $file
-     * @param array  $options
+     * @param string         $file
+     * @param array|\Closure $options
      * @throws \RuntimeException
      * @return Process
      */
-    public function fork($file, array $options = array())
+    public function fork($file, $options = array())
     {
         $options = $this->getOptions($options);
 
@@ -164,22 +164,20 @@ class ChildProcess extends EventEmitter
     /**
      * Spawn the command
      *
-     * @param string $cmd
-     * @param array  $options
+     * @param string         $cmd
+     * @param array|\Closure $options
      * @throws \RuntimeException
      * @return Process
      */
-    public function spawn($cmd, array $options = array())
+    public function spawn($cmd, $options = array())
     {
         $guid = uniqid();
 
         // Get options
         $options = $this->getOptions($options);
 
-        $dir = '/tmp';
-        if (!empty($options['dir'])) {
-            $dir = $options['dir'];
-        }
+        if (empty($options['dir'])) $options['dir'] = '/tmp';
+        $dir = $options['dir'];
 
         $files = array(
             "$dir/$guid.in.pipe",
@@ -375,7 +373,7 @@ class ChildProcess extends EventEmitter
      */
     protected function childInitialize(array $options = array())
     {
-        $this->removeAllOfAllListeners();
+        $this->removeAllListeners();
         $this->prepared = false;
         $this->master = false;
         $pid = posix_getpid();
@@ -437,7 +435,7 @@ class ChildProcess extends EventEmitter
         // Check user can be changed?
         if ($user && posix_getuid() > 0) {
             // Not root
-            throw new \RuntimeException('Only root can change user to spwan the process');
+            throw new \RuntimeException('Only root can change user to spawn the process');
         }
 
         // Check user if exists?
@@ -503,11 +501,13 @@ class ChildProcess extends EventEmitter
     /**
      * Get options
      *
-     * @param array $options
+     * @param array|\Closure $options
      * @return array
      */
-    protected function getOptions(array $options = array())
+    protected function getOptions($options = array())
     {
+        if ($options instanceof \Closure) $options = array('init' => $options);
+
         return $options + $this->default_child_options;
     }
 
@@ -565,17 +565,20 @@ class ChildProcess extends EventEmitter
     }
 
     /**
-     * Shutdown
+     * Shutdown with status
+     *
+     * @param int   $status
+     * @param mixed $info
      */
-    public function shutdown($status = 0)
+    public function shutdown($status = 0, $info = null)
     {
         if (!$this->process->isExit()) {
             $this->process->status = $status;
             // Check children
             foreach ($this->children as $child) {
-                $child->shutdown($status);
+                $child->shutdown($status, $info);
             }
-            $this->emit('exit', $status);
+            $this->emit('exit', $status, $info);
         }
     }
 
@@ -587,7 +590,7 @@ class ChildProcess extends EventEmitter
         $that = $this;
         register_shutdown_function(function () use ($that) {
             if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
-                $that->shutdown(1);
+                $that->shutdown(1, $error);
             } else {
                 $that->shutdown();
             }
