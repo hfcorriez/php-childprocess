@@ -178,103 +178,31 @@ class ChildProcess extends EventEmitter
      *
      * @param string         $cmd
      * @param array|\Closure $options
-     * @throws \RuntimeException
+     * @param bool           $auto_start
      * @return Process
      */
-    public function spawn($cmd, $options = array())
+    public function spawn($cmd, $options = array(), $auto_start = true)
     {
+        // Generate guid
         $guid = uniqid();
+        // Get create directory
+        $dir = is_array($options) && !empty($options['dir']) ? $options['dir'] : '/tmp';
+        // Events name
+        $types = array('stdin', 'stdout', 'stderr');
+        // Files to descriptor
+        $files = array();
+        // Self
+        $that = $this;
 
-        // Get options
-        $options = $this->getOptions($options);
-
-        if (empty($options['dir'])) $options['dir'] = '/tmp';
-        $dir = $options['dir'];
-
-        $files = array(
-            "$dir/$guid.in.pipe",
-            "$dir/$guid.ou.pipe",
-            "$dir/$guid.er.pipe",
-        );
-
-        $user = false;
-        // Get can be changed user
-        if (!empty($options['user'])) {
-            $options['user'] = $user = $this->tryChangeUser($options['user']);
+        // Define the stdin stdout and stderr files
+        foreach ($types as $type) {
+            $files[] = $file = $dir . '/' . $guid . '.' . $type;
+            posix_mkfifo($file, 0777);
         }
 
-        // Make pipes
-        foreach ($files as $file) {
-            posix_mkfifo($file, 0666);
-            // Check if need to change user
-            if ($user) {
-                // Change owner to changed user
-                chown($file, $user['name']);
-            }
-        }
-
-        // Build new child
-        $child = new Process($this, null, $this->pid);
-
-        // Process init
-        if ($options['init'] instanceof \Closure) {
-            $options['init']($child);
-        }
-
-        // Fork
-        $pid = pcntl_fork();
-
-        // Parallel works
-        if ($pid === -1) {
-            throw new \RuntimeException('Unable to fork child process.');
-        } else if ($pid) {
-            // Save process
-            $this->children[$pid] = $child->init($pid);
-
-            // Make file descriptor
+        $child = $this->parallel(function ($process, $child) use ($cmd, $files) {
             $pipes = array();
-            foreach ($files as $i => $file) {
-                $pipes[] = fopen($file, $i > 0 ? 'r' : 'w');
-            }
-
-            $tick = function () use ($pipes, $child) {
-                $readers = $pipes;
-
-                // Select the streams
-                if (!$readers || stream_select($readers, $null, $null, 0) <= 0) return;
-
-                // Events name
-                $events = array('stdin', 'stdout', 'stderr');
-
-                // Check which reader selected and emit event
-                foreach ($readers as $reader) {
-                    if (!is_resource($reader)) continue;
-                    $index = array_search($reader, $pipes);
-                    if (!feof($reader) && ($_buffer = fread($reader, 1024))) {
-                        $child->emit($events[$index], $_buffer);
-                    }
-                }
-            };
-
-            // Register tick function to check streams
-            $this->on('tick', $tick);
-
-            // Remove file when exit
-            $that = $this;
-            $child->on('exit', function () use ($tick, $that, &$files, &$pipes) {
-                $that->removeListener('tick', $tick);
-                foreach ($files as $file) {
-                    unlink($file);
-                }
-                $files = $pipes = array();
-            });
-
-            return $child;
-        } else {
-            // Child initialize
-            $this->childInitialize($options);
-
-            $pipes = array();
+            $options = $child->options;
 
             // Make file descriptors for proc_open()
             $fd = array();
@@ -296,7 +224,46 @@ class ChildProcess extends EventEmitter
 
             proc_close($resource);
             exit;
-        }
+        }, $options, $auto_start);
+
+        $child->on('fork', function () use (&$files, $child, $types, $that) {
+            // Make file descriptor
+            $pipes = array();
+            foreach ($files as $i => $file) {
+                $pipes[] = fopen($file, $i > 0 ? 'r' : 'w');
+            }
+
+            // Create tick process callback
+            $tick = function () use ($pipes, $child, $types) {
+                $readers = $pipes;
+
+                // Select the streams
+                if (!$readers || stream_select($readers, $null, $null, 0) <= 0) return;
+
+                // Check which reader selected and emit event
+                foreach ($readers as $reader) {
+                    if (!is_resource($reader)) continue;
+                    $index = array_search($reader, $pipes);
+                    if (!feof($reader) && ($_buffer = fread($reader, 1024))) {
+                        $child->emit($types[$index], $_buffer);
+                    }
+                }
+            };
+
+            // Register tick function to check streams
+            $that->on('tick', $tick);
+
+            // Remove file when exit
+            $child->on('exit', function () use ($tick, $that, &$files, &$pipes) {
+                $that->removeListener('tick', $tick);
+                foreach ($files as $file) {
+                    unlink($file);
+                }
+                $files = $pipes = array();
+            });
+        });
+
+        return $child;
     }
 
     /**
