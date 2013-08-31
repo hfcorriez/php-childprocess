@@ -70,7 +70,7 @@ class ChildProcess extends EventEmitter
     /**
      * Instance for current process
      */
-    public function current(array $option = array())
+    public static function current(array $option = array())
     {
         if (!self::$current) {
             self::$current = new self($option);
@@ -97,21 +97,41 @@ class ChildProcess extends EventEmitter
     /**
      * Run the closure in parallel space
      *
-     * @param callable       $closure
-     * @param array|\Closure $options
+     * @param callable|Process $closure
+     * @param array|\Closure   $options
+     * @param bool             $auto_start
      * @throws \RuntimeException
      * @return Process
      */
-    public function parallel(\Closure $closure, $options = array())
+    public function parallel($closure, $options = array(), $auto_start = true)
     {
-        $options = $this->getOptions($options);
+        // Check auto_start
+        if (is_bool($options)) {
+            $auto_start = $options;
+            $options = array();
+        }
 
-        // Build new child
-        $child = new Process($this, null, $this->pid);
+        // Check if process set
+        if ($closure instanceof Process) {
+            $child = $closure;
+            $closure = $child->runner;
+            $options = $child->options;
+        } else {
+            // Build new child
+            $child = new Process($this, null, $this->pid);
+
+            // Get options
+            $options = $this->getOptions($options);
+        }
 
         // Process init
         if ($options['init'] instanceof \Closure) {
             $options['init']($child);
+        }
+
+        if (!$auto_start) {
+            $child->register($closure, $options);
+            return $child;
         }
 
         // Fork
@@ -138,43 +158,19 @@ class ChildProcess extends EventEmitter
      *
      * @param string         $file
      * @param array|\Closure $options
-     * @throws \RuntimeException
+     * @param bool           $auto_start
      * @return Process
      */
-    public function fork($file, $options = array())
+    public function fork($file, $options = array(), $auto_start = true)
     {
-        $options = $this->getOptions($options);
-
-        // Build new child
-        $child = new Process($this, null, $this->pid);
-
-        // Process init
-        if ($options['init'] instanceof \Closure) {
-            $options['init']($child);
-        }
-
-        // Fork
-        $pid = pcntl_fork();
-
-        // Parallel works
-        if ($pid === -1) {
-            throw new \RuntimeException('Unable to fork child process.');
-        } else if ($pid) {
-            // Save child process and return
-            return $this->children[$pid] = $child->init($pid);
-        } else {
-            // Child initialize
-            $this->childInitialize($options);
-
-            // Check file
+        $process = $this->process;
+        return $this->parallel(function () use ($file, $process) {
             if (is_string($file) && is_file($file)) {
-                $process = $this->process;
                 include($file);
             } else {
                 throw new \RuntimeException('Bad file');
             }
-            exit;
-        }
+        }, $options, $auto_start);
     }
 
     /**

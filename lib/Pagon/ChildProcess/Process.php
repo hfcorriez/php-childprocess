@@ -48,6 +48,21 @@ class Process extends EventEmitter
      */
     public $listened = false;
 
+    /**
+     * @var \Closure
+     */
+    public $runner;
+
+    /**
+     * @var Array runner options
+     */
+    public $options;
+
+    /**
+     * @var Boolean
+     */
+    protected $_init = false;
+
 
     /**
      * @param ChildProcess $child_process
@@ -73,18 +88,29 @@ class Process extends EventEmitter
      */
     public function init($pid = null)
     {
-        if ($pid) {
-            $this->pid = $pid;
+        // Check init, init only can be called once.
+        if ($this->_init) {
+            throw new \RuntimeException('Process has been initialized');
         }
 
-        if (!$this->pid) {
-            throw new \RuntimeException('Process has not set pid');
+        // Check pid
+        if (!$pid && !$this->pid) {
+            throw new \RuntimeException('Process has not pid');
         }
+
+        // Set pid
+        $this->pid = $pid;
+
+        // Set init
+        $this->_init = true;
 
         $that = $this;
 
+        // Create tick function register to master
         $tick = function () use ($that) {
+            // Check queue
             if ($that->queue) return;
+
             if (!msg_queue_exists($that->pid)) return;
 
             if ($that->master) {
@@ -97,12 +123,39 @@ class Process extends EventEmitter
             $that->listened = true;
         };
 
+        // Register to tick
         $this->manager->on('tick', $tick);
 
+        // When child process exit remove this
         $this->on('exit', function () use ($that, $tick) {
             $that->manager->removeListener('tick', $tick);
         });
+
         return $this;
+    }
+
+    /**
+     * Register the runner and options for delay run
+     *
+     * @param \Closure $runner
+     * @param array    $options
+     */
+    public function register(\Closure $runner, $options = array())
+    {
+        $this->runner = $runner;
+        $this->options = $options;
+    }
+
+    /**
+     * Run
+     */
+    public function run()
+    {
+        if ($this->_init) throw new \RuntimeException("Process has been initialized");
+
+        $this->emit('run');
+
+        $this->manager->parallel($this);
     }
 
     /**
