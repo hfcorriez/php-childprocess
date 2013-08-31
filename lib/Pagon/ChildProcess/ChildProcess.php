@@ -63,6 +63,22 @@ class ChildProcess extends EventEmitter
     );
 
     /**
+     * @var ChildProcess
+     */
+    protected static $current;
+
+    /**
+     * Instance for current process
+     */
+    public function current(array $option = array())
+    {
+        if (!self::$current) {
+            self::$current = new self($option);
+        }
+        return self::$current;
+    }
+
+    /**
      * Init
      */
     public function __construct(array $options = array())
