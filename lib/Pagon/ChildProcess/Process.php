@@ -26,7 +26,7 @@ class Process extends EventEmitter
     /**
      * @var ChildProcess
      */
-    public $parent;
+    public $manager;
 
     /**
      * @var resource
@@ -75,7 +75,7 @@ class Process extends EventEmitter
         $this->pid = $pid;
         $this->ppid = $ppid;
         $this->master = $master;
-        $this->parent = $child_process;
+        $this->manager = $child_process;
 
         if ($this->pid) {
             // If pid exists, init directly
@@ -111,11 +111,11 @@ class Process extends EventEmitter
             // Check queue
             if ($that->queue) return;
 
-            if (!msg_queue_exists($that->pid)) return;
-
             if ($that->master) {
+                if (!msg_queue_exists($that->pid)) return;
                 $that->queue = msg_get_queue($that->pid);
             } else {
+                if (!msg_queue_exists($that->ppid)) return;
                 $that->queue = msg_get_queue($that->ppid);
             }
 
@@ -124,13 +124,22 @@ class Process extends EventEmitter
         };
 
         // Register to tick
-        $this->parent->on('tick', $tick);
+        $this->manager->on('tick', $tick);
 
         // When child process exit remove this
         $this->on('exit', function () use ($that, $tick) {
-            $that->parent->removeListener('tick', $tick);
+            $that->manager->removeListener('tick', $tick);
         });
 
+        return $this;
+    }
+
+    /**
+     * Listen for receive message
+     */
+    public function listen()
+    {
+        $this->manager->listen();
         return $this;
     }
 
@@ -139,11 +148,13 @@ class Process extends EventEmitter
      *
      * @param \Closure $runner
      * @param array    $options
+     * @return $this
      */
     public function register(\Closure $runner, $options = array())
     {
         $this->runner = $runner;
         $this->options = $options;
+        return $this;
     }
 
     /**
@@ -155,7 +166,7 @@ class Process extends EventEmitter
 
         $this->emit('run');
 
-        $this->parent->parallel($this);
+        $this->manager->parallel($this);
     }
 
     /**
@@ -218,6 +229,18 @@ class Process extends EventEmitter
     }
 
     /**
+     * Is init?
+     *
+     * @return bool
+     */
+    public function isInit()
+    {
+        return $this->_init;
+    }
+
+    /**
+     * Is exit?
+     *
      * @return bool
      */
     public function isExit()
@@ -226,7 +249,7 @@ class Process extends EventEmitter
     }
 
     /**
-     * If master?
+     * Is master?
      *
      * @return bool
      */
@@ -270,6 +293,6 @@ class Process extends EventEmitter
      */
     function __destruct()
     {
-        unset($this->parent, $this->listeners);
+        unset($this->manager, $this->listeners);
     }
 }

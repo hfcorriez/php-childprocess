@@ -149,7 +149,7 @@ class ChildProcess extends EventEmitter
             $this->childInitialize($options);
 
             // Support callable
-            call_user_func($closure, $child);
+            call_user_func($closure, $this->process, $child);
             exit;
         }
     }
@@ -164,8 +164,7 @@ class ChildProcess extends EventEmitter
      */
     public function fork($file, $options = array(), $auto_start = true)
     {
-        $process = $this->process;
-        return $this->parallel(function () use ($file, $process) {
+        return $this->parallel(function ($master, $child) use ($file) {
             if (is_string($file) && is_file($file)) {
                 include($file);
             } else {
@@ -201,7 +200,7 @@ class ChildProcess extends EventEmitter
             posix_mkfifo($file, 0600);
         }
 
-        $child = $this->parallel(function ($child) use ($cmd, $files) {
+        $child = $this->parallel(function ($master, $child) use ($cmd, $files) {
             $pipes = array();
             $options = $child->options;
 
@@ -353,8 +352,8 @@ class ChildProcess extends EventEmitter
      */
     protected function childInitialize(array $options = array())
     {
-        $this->removeAllListeners();
         $this->prepared = false;
+        $this->removeAllListeners();
         $this->master = false;
         $pid = posix_getpid();
         $this->ppid = $this->pid;
@@ -617,7 +616,9 @@ class ChildProcess extends EventEmitter
                     $that->emit('unknown_message', $msg);
                 } else {
                     if ($that->master) {
-                        if ($process = $that->children[$msg['from']]) {
+                        if (!empty($that->children[$msg['from']])
+                            && ($process = $that->children[$msg['from']])
+                        ) {
                             $process->emit('message', $msg['body']);
                         } else {
                             $that->emit('unknown_message', $msg);
