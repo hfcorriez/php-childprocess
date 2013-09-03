@@ -141,6 +141,7 @@ class ChildProcess extends EventEmitter
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
+            $child->emit('fork');
             // Save child process and return
             return $this->children[$pid] = $child->init($pid);
         } else {
@@ -148,7 +149,7 @@ class ChildProcess extends EventEmitter
             $this->childInitialize($options);
 
             // Support callable
-            call_user_func($closure, $this->process);
+            call_user_func($closure, $child);
             exit;
         }
     }
@@ -197,10 +198,10 @@ class ChildProcess extends EventEmitter
         // Define the stdin stdout and stderr files
         foreach ($types as $type) {
             $files[] = $file = $dir . '/' . $guid . '.' . $type;
-            posix_mkfifo($file, 0777);
+            posix_mkfifo($file, 0600);
         }
 
-        $child = $this->parallel(function ($process, $child) use ($cmd, $files) {
+        $child = $this->parallel(function ($child) use ($cmd, $files) {
             $pipes = array();
             $options = $child->options;
 
@@ -238,14 +239,14 @@ class ChildProcess extends EventEmitter
                 $readers = $pipes;
 
                 // Select the streams
-                if (!$readers || stream_select($readers, $null, $null, 0) <= 0) return;
+                if (empty($readers) || stream_select($readers, $null, $null, 0) <= 0) return;
 
                 // Check which reader selected and emit event
                 foreach ($readers as $reader) {
                     if (!is_resource($reader)) continue;
                     $index = array_search($reader, $pipes);
-                    if (!feof($reader) && ($_buffer = fread($reader, 1024))) {
-                        $child->emit($types[$index], $_buffer);
+                    while (!feof($reader)) {
+                        $child->emit($types[$index], fgets($reader));
                     }
                 }
             };
@@ -605,6 +606,8 @@ class ChildProcess extends EventEmitter
                 }
             }
 
+            $that->emit('tick');
+
             if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
                 return;
             }
@@ -625,8 +628,6 @@ class ChildProcess extends EventEmitter
                     }
                 }
             }
-
-            $that->emit('tick');
         });
     }
 }

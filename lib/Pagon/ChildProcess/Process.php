@@ -26,7 +26,7 @@ class Process extends EventEmitter
     /**
      * @var ChildProcess
      */
-    public $manager;
+    public $parent;
 
     /**
      * @var resource
@@ -75,7 +75,7 @@ class Process extends EventEmitter
         $this->pid = $pid;
         $this->ppid = $ppid;
         $this->master = $master;
-        $this->manager = $child_process;
+        $this->parent = $child_process;
 
         if ($this->pid) {
             // If pid exists, init directly
@@ -124,11 +124,11 @@ class Process extends EventEmitter
         };
 
         // Register to tick
-        $this->manager->on('tick', $tick);
+        $this->parent->on('tick', $tick);
 
         // When child process exit remove this
         $this->on('exit', function () use ($that, $tick) {
-            $that->manager->removeListener('tick', $tick);
+            $that->parent->removeListener('tick', $tick);
         });
 
         return $this;
@@ -155,7 +155,7 @@ class Process extends EventEmitter
 
         $this->emit('run');
 
-        $this->manager->parallel($this);
+        $this->parent->parallel($this);
     }
 
     /**
@@ -254,6 +254,6 @@ class Process extends EventEmitter
      */
     function __destruct()
     {
-        unset($this->manager, $this->listeners);
+        unset($this->parent, $this->listeners);
     }
 }
