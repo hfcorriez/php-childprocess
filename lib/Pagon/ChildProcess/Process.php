@@ -159,6 +159,22 @@ class Process extends EventEmitter
     }
 
     /**
+     * Join for wait process exit
+     */
+    public function join()
+    {
+        $this->run();
+        $break = false;
+
+        $this->on('exit', function () use (&$break) {
+            $break = true;
+        });
+
+        while (!$break) {
+        }
+    }
+
+    /**
      * Send msg to child process
      *
      * @param mixed $msg
