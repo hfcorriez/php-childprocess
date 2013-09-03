@@ -137,13 +137,17 @@ class ChildProcess extends EventEmitter
         // Fork
         $pid = pcntl_fork();
 
+        // Save child process and return
+        $this->children[$pid] = $child;
+
         // Parallel works
         if ($pid === -1) {
             throw new \RuntimeException('Unable to fork child process.');
         } else if ($pid) {
-            $child->emit('fork');
             // Save child process and return
-            return $this->children[$pid] = $child->init($pid);
+            $child->init($pid);
+            $child->emit('fork');
+            return $child;
         } else {
             // Child initialize
             $this->childInitialize($options);
