@@ -187,7 +187,7 @@ class ChildProcess extends EventEmitter
         // Generate guid
         $guid = uniqid();
         // Get create directory
-        $dir = is_array($options) && !empty($options['dir']) ? $options['dir'] : '/tmp';
+        $dir = is_array($options) && !empty($options['dir']) ? $options['dir'] : sys_get_temp_dir();
         // Events name
         $types = array('stdin', 'stdout', 'stderr');
         // Files to descriptor
