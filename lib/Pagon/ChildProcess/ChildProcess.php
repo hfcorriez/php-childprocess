@@ -88,7 +88,7 @@ class ChildProcess extends EventEmitter
 
         // Prepare resource and data
         $this->ppid = $this->pid = posix_getpid();
-        $this->process = new Process($this, $this->pid, $this->ppid, true);
+        $this->process = new Process($this, $this->pid, $this->ppid);
         $this->registerSigHandlers();
         $this->registerShutdownHandlers();
         $this->registerTickHandlers();
@@ -301,7 +301,7 @@ class ChildProcess extends EventEmitter
         $this->ppid = $this->pid;
         $this->pid = $pid;
         $this->queue = null;
-        $this->process = new Process($this, $this->pid, $this->ppid, false);
+        $this->process = new Process($this, $this->pid, $this->ppid);
         $this->children = array();
         $this->prepared = true;
 
@@ -319,11 +319,25 @@ class ChildProcess extends EventEmitter
     }
 
     /**
+     * Is listened?
+     *
+     * @return bool
+     */
+    public function isListened()
+    {
+        return !!$this->queue;
+    }
+
+    /**
      * Register message listener
      */
     public function listen()
     {
-        $this->queue = msg_get_queue($this->pid);
+        if (!$this->queue) {
+            $this->queue = msg_get_queue($this->pid);
+            $this->emit('listen');
+        }
+        return $this;
     }
 
     /**

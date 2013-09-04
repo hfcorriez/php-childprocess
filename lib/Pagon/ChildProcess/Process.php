@@ -34,11 +34,6 @@ class Process extends EventEmitter
     public $queue;
 
     /**
-     * @var bool If master?
-     */
-    public $master = true;
-
-    /**
      * @var bool
      */
     public $prepared = false;
@@ -68,13 +63,11 @@ class Process extends EventEmitter
      * @param ChildProcess $child_process
      * @param int          $pid
      * @param int          $ppid
-     * @param bool         $master
      */
-    public function __construct(ChildProcess $child_process, $pid, $ppid, $master = true)
+    public function __construct(ChildProcess $child_process, $pid, $ppid)
     {
         $this->pid = $pid;
         $this->ppid = $ppid;
-        $this->master = $master;
         $this->manager = $child_process;
 
         if ($this->pid) {
@@ -111,7 +104,7 @@ class Process extends EventEmitter
             // Check queue
             if ($that->queue) return;
 
-            if ($that->master) {
+            if ($that->isMaster()) {
                 if (!msg_queue_exists($that->pid)) return;
                 $that->queue = msg_get_queue($that->pid);
             } else {
@@ -196,8 +189,8 @@ class Process extends EventEmitter
         // Check queue and send messages
         if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
             return msg_send($this->queue, 1, array(
-                'from' => $this->master ? $this->ppid : $this->pid,
-                'to'   => $this->master ? $this->pid : $this->ppid,
+                'from' => $this->isMaster() ? $this->ppid : $this->pid,
+                'to'   => $this->isMaster() ? $this->pid : $this->ppid,
                 'body' => $msg
             ), true, false, $error);
         }
@@ -255,7 +248,7 @@ class Process extends EventEmitter
      */
     public function isMaster()
     {
-        return $this->master;
+        return $this->manager->isMaster();
     }
 
     /**
