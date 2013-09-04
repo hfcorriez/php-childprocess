@@ -105,9 +105,15 @@ class Process extends EventEmitter
             if ($that->queue) return;
 
             if ($that->isMaster()) {
+                /**
+                 * In master process, listen current process queue to send child
+                 */
                 if (!msg_queue_exists($that->pid)) return;
                 $that->queue = msg_get_queue($that->pid);
             } else {
+                /**
+                 * In sub process, listen the parent process to send master
+                 */
                 if (!msg_queue_exists($that->ppid)) return;
                 $that->queue = msg_get_queue($that->ppid);
             }
@@ -187,7 +193,7 @@ class Process extends EventEmitter
     public function send($msg)
     {
         // Check queue and send messages
-        if (is_resource($this->queue) && msg_stat_queue($this->queue)) {
+        if ($this->queue && is_resource($this->queue) && msg_stat_queue($this->queue)) {
             return msg_send($this->queue, 1, array(
                 'from' => $this->isMaster() ? $this->ppid : $this->pid,
                 'to'   => $this->isMaster() ? $this->pid : $this->ppid,
