@@ -562,6 +562,7 @@ class ChildProcess extends EventEmitter
                 $child->shutdown($status, $info);
             }
             $this->emit('exit', $status, $info);
+            $this->process->emit('exit', $status, $info);
         }
     }
 
