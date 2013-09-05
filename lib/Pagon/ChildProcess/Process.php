@@ -3,6 +3,7 @@
 namespace Pagon\ChildProcess;
 
 use Pagon\EventEmitter;
+use Pagon\ChildProcess;
 
 declare(ticks = 1);
 
