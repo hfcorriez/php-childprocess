@@ -51,7 +51,7 @@ class ChildProcess extends EventEmitter
     /**
      * @var array Default options for child process
      */
-    protected static $default_child_options = array(
+    protected static $child_options = array(
         'cwd'      => false,
         'user'     => false,
         'env'      => array(),
@@ -382,7 +382,7 @@ class ChildProcess extends EventEmitter
         $this->children = array();
         $this->prepared = true;
 
-        $options = $options + self::$default_child_options;
+        $options = $options + self::$child_options;
 
         $this->childProcessOptions($options);
     }
@@ -506,7 +506,7 @@ class ChildProcess extends EventEmitter
     {
         if ($options instanceof \Closure) $options = array('init' => $options);
 
-        return $options + self::$default_child_options;
+        return $options + self::$child_options;
     }
 
     /**
