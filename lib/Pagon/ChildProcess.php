@@ -581,7 +581,7 @@ class ChildProcess extends EventEmitter
 
                         if ($ok) {
                             // Emit exit
-                            $child->emit('exit', SIGINT);
+                            $child->shutdown(SIGINT);
                             $this->clear($child);
                         }
                     }
