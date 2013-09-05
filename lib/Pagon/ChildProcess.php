@@ -186,9 +186,6 @@ class ChildProcess extends EventEmitter
      */
     public function spawn($cmd, $options = array(), $auto_start = true)
     {
-        // Get options
-        if (!is_array($options)) $options = array();
-        $options = $this->getOptions($options);
         // Generate guid
         $guid = uniqid();
         // Get create directory
@@ -206,7 +203,7 @@ class ChildProcess extends EventEmitter
             posix_mkfifo($file, 0600);
         }
 
-        $child = $this->parallel(function ($process) use ($cmd, $files, $options) {
+        $child = $this->parallel(function ($process) use ($cmd, $files) {
             $pipes = array();
 
             // Make file descriptors for proc_open()
@@ -216,7 +213,7 @@ class ChildProcess extends EventEmitter
             }
 
             // Open pipe to run process
-            $resource = proc_open($cmd, $fd, $pipes, $options['cwd'], $options['env']);
+            $resource = proc_open($cmd, $fd, $pipes);
 
             if (!is_resource($resource)) {
                 throw new \RuntimeException('Can not run "' . $cmd . '" using pipe open');

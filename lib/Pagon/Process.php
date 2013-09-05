@@ -162,7 +162,7 @@ class Process extends EventEmitter
      */
     public function run()
     {
-        if ($this->_init) throw new \RuntimeException("Process has been initialized");
+        if ($this->_init) throw new \RuntimeException("Process has been initialized, can not run.");
 
         $this->emit('run');
 
