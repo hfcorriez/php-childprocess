@@ -264,10 +264,6 @@ $manager->on('tick', function(){
 - `run`       When process run in child, run in master
 - `init`      When child process, run in master
 
-# Api document
-
-	wait for release...
-
 # License
 
 (The MIT License)
