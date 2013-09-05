@@ -95,6 +95,9 @@ class Process extends EventEmitter
         // Set pid
         $this->pid = $pid;
 
+        // Init
+        $this->emit('init');
+
         // Set init
         $this->_init = true;
 
