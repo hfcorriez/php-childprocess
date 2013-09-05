@@ -244,19 +244,20 @@ $child->join();
 
 - `tick`      Every tick will trigger this
 - `listen`    Listen the message
-- `exit`      When process is exit
-- `quit`      When SIGQUIT received
 - `signal`    When signal received, All
 - `abort`     Abort：SIGINT,SIGTERM
+- `finish`    Finish process (Normal exit)
+- `exit`      When process is exit, includes `abort` and `finish` events
 
 ### Process Events
 
-- `listen`    Process instance's manager listen the message queue, run in master
-- `exit`      Process instance exit, run in master
-- `run`       Process instance run in child, run in master
-- `init`      Process instance child process created, run in master
-- `fork`      Process instance fork, run in master
+- `listen`    Process instance's manager listen the message queue
+- `run`       Process instance run in child
+- `init`      Process instance child process created
+- `fork`      Process instance fork
 - `abort`     Process instance abort：SIGINT,SIGTERM
+- `finish`    Process instance finish process (Normal exit)
+- `exit`      Process instance exit, includes `abort` and `finish` events
 
 # License
 

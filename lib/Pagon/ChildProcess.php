@@ -620,6 +620,7 @@ class ChildProcess extends EventEmitter
             if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
                 $that->shutdown(1, $error);
             } else {
+                $that->emit('finish', 0);
                 $that->shutdown();
             }
 
@@ -649,6 +650,7 @@ class ChildProcess extends EventEmitter
                         break;
                     }
 
+                    $that->children[$pid]->emit('finish', $status);
                     $that->children[$pid]->shutdown($status);
                     $that->clear($pid);
                 }
