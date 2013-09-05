@@ -285,6 +285,6 @@ class Process extends EventEmitter
      */
     function __destruct()
     {
-        unset($this->queue, $this->listeners, $this->manager);
+        $this->listeners = array();
     }
 }
