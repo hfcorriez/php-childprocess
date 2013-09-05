@@ -239,17 +239,17 @@ $child->join();
 
 - `tick`      每个tick都会触发，主要用于监控一些行为来及时反馈到管理器
 - `listen`    监听消息队列
-- `exit`      进程退出
+- `exit`      管理器进程退出
 - `quit`      收到SIGQUIT信号
 - `signal`    收到任何的信号
 
 ### Process事件
 
-- `listen`    当管理器开始监听队列时触发
-- `exit`      当退出时
-- `run`       当手动运行时
-- `init`      当子进程创建完成时
-- `fork`      当fork时
+- `listen`    当前进程实例开始监听队列时触发
+- `exit`      当前进程实例退出时
+- `run`       当前进程实例手动运行时
+- `init`      当前进程实例子进程创建完成时
+- `fork`      当前子进程fork时
 
 # 授权
 
