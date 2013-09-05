@@ -531,7 +531,7 @@ class ChildProcess extends EventEmitter
      */
     public function signalHandler($signal)
     {
-        $this->emit('signal');
+        $this->emit('signal', $signal);
         $this->emit($signal);
 
         // Default signal process
