@@ -247,14 +247,16 @@ $child->join();
 - `exit`      When process is exit
 - `quit`      When SIGQUIT received
 - `signal`    When signal received, All
+- `abort`     Abort：SIGINT,SIGTERM
 
 ### Process Events
 
-- `listen`    When manager listen the message queue, run in master
-- `exit`      When exit, run in master
-- `run`       When process run in child, run in master
-- `init`      When child process created, run in master
-- `fork`      When fork, run in master
+- `listen`    Process instance's manager listen the message queue, run in master
+- `exit`      Process instance exit, run in master
+- `run`       Process instance run in child, run in master
+- `init`      Process instance child process created, run in master
+- `fork`      Process instance fork, run in master
+- `abort`     Process instance abort：SIGINT,SIGTERM
 
 # License
 

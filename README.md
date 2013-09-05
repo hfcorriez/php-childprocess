@@ -241,6 +241,7 @@ $child->join();
 - `exit`      管理器进程退出
 - `quit`      收到SIGQUIT信号
 - `signal`    收到任何的信号
+- `abort`     中断时：SIGINT,SIGTERM
 
 ### Process事件
 
@@ -248,7 +249,8 @@ $child->join();
 - `exit`      当前进程实例退出时
 - `run`       当前进程实例手动运行时
 - `init`      当前进程实例子进程创建完成时
-- `fork`      当前子进程fork时
+- `fork`      当前进程实例fork时
+- `abort`     当前进程实例中断时：SIGINT,SIGTERM
 
 # 授权
 
