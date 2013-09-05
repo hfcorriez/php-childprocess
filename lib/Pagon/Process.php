@@ -1,9 +1,6 @@
 <?php
 
-namespace Pagon\ChildProcess;
-
-use Pagon\EventEmitter;
-use Pagon\ChildProcess;
+namespace Pagon;
 
 declare(ticks = 1);
 

@@ -2,9 +2,6 @@
 
 namespace Pagon;
 
-use Pagon\EventEmitter;
-use Pagon\ChildProcess\Process;
-
 declare(ticks = 1);
 
 class ChildProcess extends EventEmitter
@@ -550,11 +547,19 @@ class ChildProcess extends EventEmitter
         switch ($signal) {
             case SIGTERM:
             case SIGINT:
-                $this->shutdown();
                 // Check children
-                foreach ($this->children as $child) {
-                    $child->kill(SIGINT);
+                while ($this->children) {
+                    foreach ($this->children as $child) {
+                        $ok = $child->kill(SIGINT);
+                        /* EPERM */
+                        if (posix_get_last_error() == 1) $ok = false;
+
+                        if ($ok) {
+                            $this->clear($child);
+                        }
+                    }
                 }
+                $this->shutdown();
                 exit;
                 break;
             case SIGQUIT:
@@ -573,10 +578,6 @@ class ChildProcess extends EventEmitter
     {
         if (!$this->process->isExit()) {
             $this->process->status = $status;
-            // Check children
-            foreach ($this->children as $child) {
-                $child->shutdown($status, $info);
-            }
             $this->emit('exit', $status, $info);
             $this->process->emit('exit', $status, $info);
         }

@@ -20,7 +20,8 @@
   },
   "autoload": {
     "psr-0": {
-      "Pagon\\ChildProcess": "lib/"
+      "Pagon\\ChildProcess": "lib/",
+      "Pagon\\Process": "lib/"
     }
   }
 }
