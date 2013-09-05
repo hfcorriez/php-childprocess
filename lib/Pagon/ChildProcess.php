@@ -580,6 +580,8 @@ class ChildProcess extends EventEmitter
                         if (posix_get_last_error() == 1) $ok = false;
 
                         if ($ok) {
+                            // Emit exit
+                            $child->emit('exit', SIGINT);
                             $this->clear($child);
                         }
                     }
