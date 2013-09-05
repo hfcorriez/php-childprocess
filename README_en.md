@@ -152,7 +152,7 @@ declare(ticks = 1) ;
 
 $manager = new ChildProcess();
 
-$child = $manager->spawn('/usr/sbin/netstat');
+$child = $manager->spawn('/usr/sbin/netstat', false);
 
 $child->on('stdout', function ($data) {
     error_log('receive stdout data: '  . $data);
@@ -228,7 +228,7 @@ $manager = new ChildProcess();
 $child = $manager->spawn('/usr/sbin/netstat', array(
     'timeout' => 60 // Will wait 60 seconds
     'callback' => function(){ error_log('netstat start'); }
-));
+), false);
 
 $child->on('stdout', function ($data) {
     echo $data;
