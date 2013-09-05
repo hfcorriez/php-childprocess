@@ -538,10 +538,10 @@ class ChildProcess extends EventEmitter
     protected function registerSigHandlers()
     {
         pcntl_signal(SIGTERM, array($this, 'signalHandler'));
-        pcntl_signal(SIGINT, array($this, 'signalHandler'));
-        pcntl_signal(SIGQUIT, array($this, 'signalHandler'));
+        pcntl_signal(SIGINT, array($this, 'signalHandler'));;
         pcntl_signal(SIGUSR1, array($this, 'signalHandler'));
         pcntl_signal(SIGUSR2, array($this, 'signalHandler'));
+        //pcntl_signal(SIGQUIT, array($this, 'signalHandler'));
         //pcntl_signal(SIGCONT, array($this, 'signalHandler'));
         //pcntl_signal(SIGPIPE, array($this, 'signalHandler'));
         //pcntl_signal(SIGCHLD, array($this, 'signalHandler'));
@@ -582,16 +582,15 @@ class ChildProcess extends EventEmitter
 
                         if ($ok) {
                             // Emit exit
-                            $child->shutdown(SIGINT);
+                            $child->emit('abort', $signal);
+                            $child->shutdown($signal);
                             $this->clear($child);
                         }
                     }
                 }
-                $this->shutdown();
+                $this->emit('abort', $signal);
+                $this->shutdown($signal);
                 exit;
-                break;
-            case SIGQUIT:
-                $this->emit('quit');
                 break;
         }
     }
