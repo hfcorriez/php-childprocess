@@ -11,23 +11,21 @@
 
 ## Examples
 
-### Current Process
+### Use Manager
 
     Current process handle
 
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$process->on('exit', function () use ($process) {
+$manager->on('exit', function () use ($process) {
     error_log('exit');
     exit;
 });
 
-while(1) {
-    // to do something
-}
+// To do something
 ```
 
 ### Parallel Works
@@ -40,18 +38,33 @@ declare(ticks = 1) ;
 $process = new ChildProcess();
 
 $child = $process->parallel(function () {
+    sleep(10);
+    // to do something
+});
+```
+
+Or start manually
+
+```php
+declare(ticks = 1) ;
+
+$process = new ChildProcess();
+
+$child = $process->parallel(function () {
     // to do something
     sleep(10);
     error_log('child execute');
-});
+}, false);
 
 $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
 });
 
-while(1) {
-    // to do something
-}
+// Will wait the child exit
+$child->join();
+
+// Will run but don't wait the child exit
+$child->run
 ```
 
 ### Fork with the PHP file
@@ -65,22 +78,20 @@ declare(ticks = 1) ;
 
 $process = new ChildProcess();
 
-$child = $process->fork(__DIR__ . '/worker.php');
+$child = $process->fork(__DIR__ . '/worker.php', false);
 
 $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
 });
 
-while(1) {
-    // to do something
-}
+$child->join();
 ```
 
 The Fork PHP file:
 
 ```php
-$process->send('hello master');
-
+$master // The parent process
+$child  // Current process
 // Some thing to do in child process
 ```
 
@@ -91,17 +102,21 @@ $process->send('hello master');
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->parallel(function (Process $process) {
-    $process->on('message', function ($msg) {
+$manager->listen();
+
+$child = $process->parallel(function (Process $master, Process $child) {
+    $child->listen();
+
+    $master->on('message', function ($msg) {
         error_log('child revive message: ' . $msg);
     });
 
-    $process->send('hello master');
+    $master->send('hello master');
 
     error_log('child execute');
-});
+}, false);
 
 $child->on('message', function ($msg) {
     error_log('parent receive message: ' . $msg);
@@ -109,9 +124,7 @@ $child->on('message', function ($msg) {
 
 $child->send('hi child');
 
-while (1) {
-    // to do some thing
-}
+$child->join();
 ```
 
 ### Spawn the command
@@ -121,9 +134,9 @@ while (1) {
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->spawn('ls');
+$child = $manager->spawn('/usr/sbin/netstat');
 
 $child->on('stdout', function ($data) {
     error_log('receive stdout data: '  . $data);
@@ -135,9 +148,44 @@ $child->on('stderr', function ($data) {
     // to save data or process something
 });
 
-while (1) {
-    // to do some thing
-}
+$child->join();
+```
+
+### Advance usage
+
+    Setting options
+
+Current setting supported:
+
+```php
+array(
+    'cwd'      => false,        // Current working deirectory
+    'user'     => false,        // Startup user
+    'env'      => array(),      // Enviroments
+    'timeout'  => 0,            // Timeout
+    'init'     => false,        // Init callback
+    'callback' => false         // Child startup callback
+)
+```
+
+Some usage:
+
+```php
+declare(ticks = 1) ;
+
+$manager = new ChildProcess();
+
+$child = $manager->spawn('/usr/sbin/netstat', array(
+    'timeout' => 60 // Will wait 60 seconds
+    'callback' => function(){ error_log('netstat start'); }
+));
+
+$child->on('stdout', function ($data) {
+    echo $data;
+    // to save data or process it
+});
+
+$child->join();
 ```
 
 ### Api document
