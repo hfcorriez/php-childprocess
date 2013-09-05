@@ -11,7 +11,7 @@
 
 ## Examples
 
-### Use Manager
+### ChildProcess Manager
 
     Current process handle
 
