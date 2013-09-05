@@ -251,18 +251,18 @@ $manager->on('tick', function(){
 
 ### Manager Events
 
-`tick`      Every tick will trigger this
-`listen`    Listen the message
-`exit`      When process is exit
-`quit`      When SIGQUIT received
-`signal`    When signal received, All
+- `tick`      Every tick will trigger this
+- `listen`    Listen the message
+- `exit`      When process is exit
+- `quit`      When SIGQUIT received
+- `signal`    When signal received, All
 
 ### Process Events
 
-`listen`    When manager listen the message queue, run in master
-`exit`      When exit, run in master
-`run`       When process run in child, run in master
-`init`      When child process, run in master
+- `listen`    When manager listen the message queue, run in master
+- `exit`      When exit, run in master
+- `run`       When process run in child, run in master
+- `init`      When child process, run in master
 
 # Api document
 
