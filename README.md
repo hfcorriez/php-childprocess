@@ -1,17 +1,41 @@
-## What's PHP-ChildProcess
+# PHP-ChildProcess
 
     This is a library for PHPer to handle Child Process easy and simple. That's it.
 
-## Dependencies
+# Dependencies
 
 - php5.3+
 - pcntl
 - posix
 - [pagon/eventemitter](https://github.com/hfcorriez/php-eventemitter)
 
-## Examples
+# Install
 
-### ChildProcess Manager
+add `"pagon/childprocess": "*"` to you `composer.json`:
+
+```
+composer.phar install
+```
+
+# Overview
+
+- [Use ChildProcess](#childprocess-manager)
+- [Create Child Process](#create-child-process)
+  - [Parallel works with closure](#parallel-works)
+    - [Automatic Run](#automatic-run)
+    - [Manually Run](#manually-run)
+    - [Manually Join](#manually-join)
+  - [Fork PHP file](#fork-php-file)
+  - [Send message](#send-message)
+  - [Spawn the command](#spawn-the-command)
+  - [Advance usage](#advance-usage)
+- [Events](#events)
+  - [ChildProcess](#manager-events)
+  - [Process](#process-events)
+
+# Usage
+
+## ChildProcess Manager
 
     Current process handle
 
@@ -28,9 +52,13 @@ $manager->on('exit', function () use ($process) {
 // To do something
 ```
 
+## Create Child Process
+
 ### Parallel Works
 
     Run the callable function in parallel child process space
+
+#### Automatic run
 
 ```php
 declare(ticks = 1) ;
@@ -43,7 +71,31 @@ $child = $process->parallel(function () {
 });
 ```
 
-Or start manually
+#### Manually Run
+
+```php
+declare(ticks = 1) ;
+
+$process = new ChildProcess();
+
+$child = $process->parallel(function () {
+    // to do something
+    sleep(10);
+    error_log('child execute');
+}, false);
+
+$child->on('exit', function ($status) {
+    error_log('child exit ' . $status);
+});
+
+// Will run but don't wait the child exit
+$child->run()
+
+while(1) { /*to do something */}
+```
+
+#### Manually Join
+
 
 ```php
 declare(ticks = 1) ;
@@ -62,12 +114,9 @@ $child->on('exit', function ($status) {
 
 // Will wait the child exit
 $child->join();
-
-// Will run but don't wait the child exit
-$child->run
 ```
 
-### Fork with the PHP file
+### Fork PHP file
 
     Run the PHP file in parallel child process space
 
@@ -187,6 +236,33 @@ $child->on('stdout', function ($data) {
 
 $child->join();
 ```
+
+## Events
+
+### Register Events
+
+```
+$manager = new ChildProcess();
+
+$manager->on('tick', function(){
+    // Check something
+});
+```
+
+### Manager Events
+
+`tick`      Every tick will trigger this
+`listen`    Listen the message
+`exit`      When process is exit
+`quit`      When SIGQUIT received
+`signal`    When signal received, All
+
+### Process Events
+
+`listen`    When manager listen the message queue, run in master
+`exit`      When exit, run in master
+`run`       When process run in child, run in master
+`init`      When child process, run in master
 
 ### Api document
 
