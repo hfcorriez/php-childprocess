@@ -44,7 +44,7 @@ declare(ticks = 1) ;
 
 $manager = new ChildProcess();
 
-$manager->on('exit', function () use ($process) {
+$manager->on('exit', function () use ($master) {
     error_log('exit');
     exit;
 });
@@ -63,9 +63,9 @@ $manager->on('exit', function () use ($process) {
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->parallel(function () {
+$child = $manager->parallel(function () {
     sleep(10);
     // to do something
 });
@@ -76,9 +76,9 @@ $child = $process->parallel(function () {
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->parallel(function () {
+$child = $manager->parallel(function () {
     // to do something
     sleep(10);
     error_log('child execute');
@@ -100,9 +100,9 @@ while(1) { /*to do something */}
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->parallel(function () {
+$child = $manager->parallel(function () {
     // to do something
     sleep(10);
     error_log('child execute');
@@ -125,9 +125,9 @@ The Master:
 ```php
 declare(ticks = 1) ;
 
-$process = new ChildProcess();
+$manager = new ChildProcess();
 
-$child = $process->fork(__DIR__ . '/worker.php', false);
+$child = $manager->fork(__DIR__ . '/worker.php', false);
 
 $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
@@ -155,7 +155,7 @@ $manager = new ChildProcess();
 
 $manager->listen();
 
-$child = $process->parallel(function (Process $master, Process $child) {
+$child = $manager->parallel(function (Process $master, Process $child) {
     $child->listen();
 
     $master->on('message', function ($msg) {
