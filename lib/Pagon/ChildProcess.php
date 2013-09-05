@@ -122,14 +122,15 @@ class ChildProcess extends EventEmitter
             $options = $this->getOptions($options);
         }
 
-        // Process init
-        if ($options['init'] instanceof \Closure) {
-            $options['init']($child);
-        }
-
+        // Auto start
         if (!$auto_start) {
             $child->register($closure, $options);
             return $child;
+        }
+
+        // Process init
+        if ($options['init'] instanceof \Closure) {
+            $options['init']($child);
         }
 
         // Fork
@@ -151,7 +152,7 @@ class ChildProcess extends EventEmitter
             $this->childInitialize($options);
 
             // Support callable
-            call_user_func($closure, $this->process, $child);
+            call_user_func($closure, $this->process);
             exit;
         }
     }
@@ -166,7 +167,7 @@ class ChildProcess extends EventEmitter
      */
     public function fork($file, $options = array(), $auto_start = true)
     {
-        return $this->parallel(function ($master, $child) use ($file) {
+        return $this->parallel(function ($process) use ($file) {
             if (is_string($file) && is_file($file)) {
                 include($file);
             } else {
@@ -185,10 +186,13 @@ class ChildProcess extends EventEmitter
      */
     public function spawn($cmd, $options = array(), $auto_start = true)
     {
+        // Get options
+        if (!is_array($options)) $options = array();
+        $options = $this->getOptions($options);
         // Generate guid
         $guid = uniqid();
         // Get create directory
-        $dir = is_array($options) && !empty($options['dir']) ? $options['dir'] : sys_get_temp_dir();
+        $dir = !empty($options['dir']) ? $options['dir'] : sys_get_temp_dir();
         // Events name
         $types = array('stdin', 'stdout', 'stderr');
         // Files to descriptor
@@ -202,9 +206,8 @@ class ChildProcess extends EventEmitter
             posix_mkfifo($file, 0600);
         }
 
-        $child = $this->parallel(function ($master, $child) use ($cmd, $files) {
+        $child = $this->parallel(function ($process) use ($cmd, $files, $options) {
             $pipes = array();
-            $options = $child->options;
 
             // Make file descriptors for proc_open()
             $fd = array();
@@ -375,7 +378,7 @@ class ChildProcess extends EventEmitter
         $this->ppid = $this->pid;
         $this->pid = $pid;
         $this->queue = null;
-        $this->process = new Process($this, $this->pid, $this->ppid, false);
+        $this->process = new Process($this, $this->pid, $this->ppid);
         $this->children = array();
         $this->prepared = true;
 
