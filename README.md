@@ -175,11 +175,11 @@ $manager = new ChildProcess();
 $manager->listen();
 
 $child = $manager->parallel(function (Process $process) {
-    $process->listen();
-
     $process->on('message', function ($msg) {
         error_log('child revive message: ' . $msg);
     });
+
+    $process->listen();
 
     $process->send('hello master');
 
