@@ -49,6 +49,11 @@ class ChildProcess extends EventEmitter
     public $children = array();
 
     /**
+     * @var Process[]
+     */
+    public $prepared_children = array();
+
+    /**
      * @var array Default options for child process
      */
     protected static $child_options = array(
@@ -97,15 +102,15 @@ class ChildProcess extends EventEmitter
      *
      * @param callable|Process $closure
      * @param array|\Closure   $options
-     * @param bool             $auto_start
+     * @param bool             $start
      * @throws \RuntimeException
      * @return Process
      */
-    public function parallel($closure, $options = array(), $auto_start = true)
+    public function parallel($closure, $options = array(), $start = true)
     {
         // Check auto_start
         if (is_bool($options)) {
-            $auto_start = $options;
+            $start = $options;
             $options = array();
         }
 
@@ -123,8 +128,11 @@ class ChildProcess extends EventEmitter
         }
 
         // Auto start
-        if (!$auto_start) {
+        if (!$start) {
             $child->register($closure, $options);
+            if (!in_array($child, $this->prepared_children)) {
+                $this->prepared_children[] = $child;
+            }
             return $child;
         }
 
@@ -138,6 +146,10 @@ class ChildProcess extends EventEmitter
 
         // Save child process and return
         $this->children[$pid] = $child;
+        // Remove from prepared children
+        if (($index = array_search($child, $this->prepared_children)) !== false) {
+            unset($this->prepared_children[$index]);
+        }
 
         // Parallel works
         if ($pid === -1) {
@@ -162,10 +174,10 @@ class ChildProcess extends EventEmitter
      *
      * @param string         $file
      * @param array|\Closure $options
-     * @param bool           $auto_start
+     * @param bool           $start
      * @return Process
      */
-    public function fork($file, $options = array(), $auto_start = true)
+    public function fork($file, $options = array(), $start = true)
     {
         return $this->parallel(function ($process) use ($file) {
             if (is_string($file) && is_file($file)) {
@@ -173,7 +185,7 @@ class ChildProcess extends EventEmitter
             } else {
                 throw new \RuntimeException('Bad file');
             }
-        }, $options, $auto_start);
+        }, $options, $start);
     }
 
     /**
@@ -181,10 +193,10 @@ class ChildProcess extends EventEmitter
      *
      * @param string         $cmd
      * @param array|\Closure $options
-     * @param bool           $auto_start
+     * @param bool           $start
      * @return Process
      */
-    public function spawn($cmd, $options = array(), $auto_start = true)
+    public function spawn($cmd, $options = array(), $start = true)
     {
         // Generate guid
         $guid = uniqid();
@@ -226,7 +238,7 @@ class ChildProcess extends EventEmitter
 
             proc_close($resource);
             exit;
-        }, $options, $auto_start);
+        }, $options, $start);
 
         $child->on('fork', function () use (&$files, $child, $types, $that) {
             // Make file descriptor
@@ -266,6 +278,19 @@ class ChildProcess extends EventEmitter
         });
 
         return $child;
+    }
+
+    /**
+     * Join
+     */
+    public function join()
+    {
+        foreach ($this->prepared_children as $child) {
+            $child->run();
+        }
+
+        while ($this->children) {
+        }
     }
 
     /**

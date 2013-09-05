@@ -174,15 +174,7 @@ class Process extends EventEmitter
      */
     public function join()
     {
-        $this->run();
-        $break = false;
-
-        $this->on('exit', function () use (&$break) {
-            $break = true;
-        });
-
-        while (!$break) {
-        }
+        $this->manager->join();
     }
 
     /**
