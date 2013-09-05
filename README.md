@@ -39,7 +39,7 @@ declare(ticks = 1) ;
 
 $manager = new ChildProcess();
 
-$manager->on('exit', function () use ($master) {
+$manager->on('exit', function () use ($process) {
     error_log('exit');
     exit;
 });
@@ -133,8 +133,7 @@ $child->join();
 PHP文件：
 
 ```php
-$master // The parent process
-$child  // Current process
+$process // The parent process
 // 需要做的工作
 ```
 
@@ -175,14 +174,14 @@ $manager = new ChildProcess();
 
 $manager->listen();
 
-$child = $manager->parallel(function (Process $master, Process $child) {
-    $child->listen();
+$child = $manager->parallel(function (Process $process) {
+    $process->listen();
 
-    $master->on('message', function ($msg) {
+    $process->on('message', function ($msg) {
         error_log('child revive message: ' . $msg);
     });
 
-    $master->send('hello master');
+    $process->send('hello master');
 
     error_log('child execute');
 }, false);
