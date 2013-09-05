@@ -1,4 +1,4 @@
-其他语言：[English](README_en.md)
+其它语言：[English](README_en.md)
 
 # PHP-ChildProcess
 
@@ -14,23 +14,23 @@ composer.phar install
 
 # 目录
 
-- [使用ChildProcess](#childprocess-manager)
-- [创建子进程](#create-child-process)
-  - [平行运行](#parallel-works)
-    - [自动运行](#automatic-run)
-    - [手动运行](#manually-run)
-    - [手动运行等待](#manually-join)
-  - [通过PHP文件Fork](#fork-php-file)
-  - [发送消息](#send-message)
-  - [Spawn命令](#spawn-the-command)
-  - [高级用法](#advance-usage)
-- [事件](#events)
-  - [ChildProcess](#manager-events)
-  - [Process](#process-events)
+- [使用管理器](#使用管理器)
+- [创建子进程](#创建子进程)
+  - [自动运行](#自动运行)
+  - [手动运行](#手动运行)
+  - [手动运行等待](#手动运行等待)
+  - [运行PHP文件](#运行PHP文件)
+  - [运行命令](#运行命令)
+- [其它](#其它)
+  - [发送消息](#发送消息)
+  - [高级用法](#高级用法)
+- [事件](#事件)
+  - [ChildProcess](#childprocess事件)
+  - [Process](#process事件)
 
-# Usage
+# 使用
 
-## ChildProcess Manager
+## 使用管理器
 
 控制当前进程
 
@@ -47,13 +47,11 @@ $manager->on('exit', function () use ($master) {
 // 做其他事情或等待
 ```
 
-## Create Child Process
+## 创建子进程
 
-### Parallel Works
+### 简单运行
 
 在子平行空间运行闭包函数
-
-#### Automatic run
 
 ```php
 declare(ticks = 1) ;
@@ -66,9 +64,9 @@ $child = $manager->parallel(function () {
 });
 ```
 
-> 如果子进程正在工作，主进程退出，那将没法来handle事件
+> 为了保证主进程不退出来handle事件，可以使用`join`或者`while(1)`来保证运行
 
-#### Manually Run
+### 手动运行
 
 ```php
 declare(ticks = 1) ;
@@ -85,14 +83,13 @@ $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
 });
 
-// Will run but don't wait the child exit
+// 只运行子进程不等待退出
 $child->run()
 
 while(1) { /*to do something */}
 ```
 
-#### Manually Join
-
+### 手动运行等待
 
 ```php
 declare(ticks = 1) ;
@@ -109,13 +106,13 @@ $child->on('exit', function ($status) {
     error_log('child exit ' . $status);
 });
 
-// Will wait the child exit
+// 等待子进程退出
 $child->join();
 ```
 
-### Fork PHP file
+### 运行PHP文件
 
-    Run the PHP file in parallel child process space
+在子平行空间运行PHP文件
 
 主进程：
 
@@ -138,10 +135,36 @@ PHP文件：
 ```php
 $master // The parent process
 $child  // Current process
-// Some thing to do in child process
+// 需要做的工作
 ```
 
-### Send message
+### 运行命令
+
+在子进程运行命令，并且捕获输出
+
+```php
+declare(ticks = 1) ;
+
+$manager = new ChildProcess();
+
+$child = $manager->spawn('/usr/sbin/netstat');
+
+$child->on('stdout', function ($data) {
+    error_log('receive stdout data: '  . $data);
+    // to save data or process it
+});
+
+$child->on('stderr', function ($data) {
+    error_log('receive stderr data: '  . $data);
+    // to save data or process something
+});
+
+$child->join();
+```
+
+## 其它
+
+### 发送消息
 
 父子进程可以使用消息来通信
 
@@ -173,33 +196,9 @@ $child->send('hi child');
 $child->join();
 ```
 
-### Spawn the command
+### 高级用法
 
-在子进程运行命令，并且捕获输出
-
-```php
-declare(ticks = 1) ;
-
-$manager = new ChildProcess();
-
-$child = $manager->spawn('/usr/sbin/netstat');
-
-$child->on('stdout', function ($data) {
-    error_log('receive stdout data: '  . $data);
-    // to save data or process it
-});
-
-$child->on('stderr', function ($data) {
-    error_log('receive stderr data: '  . $data);
-    // to save data or process something
-});
-
-$child->join();
-```
-
-### Advance usage
-
-设置选项
+#### 设置选项
 
 当前支持的选项列表：
 
@@ -234,19 +233,9 @@ $child->on('stdout', function ($data) {
 $child->join();
 ```
 
-## Events
+## 事件
 
-### Register Events
-
-```
-$manager = new ChildProcess();
-
-$manager->on('tick', function(){
-    // Check something
-});
-```
-
-### Manager Events
+### ChildProcess事件
 
 - `tick`      每个tick都会触发，主要用于监控一些行为来及时反馈到管理器
 - `listen`    监听消息队列
@@ -254,7 +243,7 @@ $manager->on('tick', function(){
 - `quit`      收到SIGQUIT信号
 - `signal`    收到任何的信号
 
-### Process Events
+### Process事件
 
 - `listen`    当管理器开始监听队列时触发
 - `exit`      当退出时
@@ -262,6 +251,6 @@ $manager->on('tick', function(){
 - `init`      当子进程创建完成时
 - `fork`      当fork时
 
-# License
+# 授权
 
 [MIT](./LICENSE)

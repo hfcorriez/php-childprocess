@@ -21,23 +21,23 @@ composer.phar install
 
 - [Use ChildProcess](#childprocess-manager)
 - [Create Child Process](#create-child-process)
-  - [Parallel works with closure](#parallel-works)
-    - [Automatic Run](#automatic-run)
-    - [Manually Run](#manually-run)
-    - [Manually Join](#manually-join)
+  - [Automatic Run](#automatic-run)
+  - [Manually Run](#manually-run)
+  - [Manually Join](#manually-join)
   - [Fork PHP file](#fork-php-file)
-  - [Send message](#send-message)
   - [Spawn the command](#spawn-the-command)
+- [Other](#other)
+  - [Send message](#send-message)
   - [Advance usage](#advance-usage)
 - [Events](#events)
-  - [ChildProcess](#manager-events)
+  - [ChildProcess](#childprocess-events)
   - [Process](#process-events)
 
 # Usage
 
 ## ChildProcess Manager
 
-    Current process handle
+Current process handle
 
 ```php
 declare(ticks = 1) ;
@@ -54,9 +54,7 @@ $manager->on('exit', function () use ($master) {
 
 ## Create Child Process
 
-### Parallel Works
-
-    Run the callable function in parallel child process space
+Run the closure function in parallel child process space
 
 #### Automatic run
 
@@ -70,6 +68,8 @@ $child = $manager->parallel(function () {
     // to do something
 });
 ```
+
+> To keep master running to handle the events, you can use `join` or use `while(1)` for forever run
 
 #### Manually Run
 
@@ -118,7 +118,7 @@ $child->join();
 
 ### Fork PHP file
 
-    Run the PHP file in parallel child process space
+Run the PHP file in parallel child process space
 
 The Master:
 
@@ -144,9 +144,35 @@ $child  // Current process
 // Some thing to do in child process
 ```
 
+### Spawn the command
+
+Run the command in child process
+
+```php
+declare(ticks = 1) ;
+
+$manager = new ChildProcess();
+
+$child = $manager->spawn('/usr/sbin/netstat');
+
+$child->on('stdout', function ($data) {
+    error_log('receive stdout data: '  . $data);
+    // to save data or process it
+});
+
+$child->on('stderr', function ($data) {
+    error_log('receive stderr data: '  . $data);
+    // to save data or process something
+});
+
+$child->join();
+```
+
+## Other
+
 ### Send message
 
-    Message communicate between parent process and child process
+Message communicate between parent process and child process
 
 ```php
 declare(ticks = 1) ;
@@ -176,33 +202,9 @@ $child->send('hi child');
 $child->join();
 ```
 
-### Spawn the command
-
-    Run the command in child process
-
-```php
-declare(ticks = 1) ;
-
-$manager = new ChildProcess();
-
-$child = $manager->spawn('/usr/sbin/netstat');
-
-$child->on('stdout', function ($data) {
-    error_log('receive stdout data: '  . $data);
-    // to save data or process it
-});
-
-$child->on('stderr', function ($data) {
-    error_log('receive stderr data: '  . $data);
-    // to save data or process something
-});
-
-$child->join();
-```
-
 ### Advance usage
 
-    Setting options
+#### Setting options
 
 Current setting supported:
 
@@ -238,16 +240,6 @@ $child->join();
 ```
 
 ## Events
-
-### Register Events
-
-```
-$manager = new ChildProcess();
-
-$manager->on('tick', function(){
-    // Check something
-});
-```
 
 ### Manager Events
 
