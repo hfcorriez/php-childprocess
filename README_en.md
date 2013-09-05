@@ -1,30 +1,35 @@
-其他语言：[English](README_en.md)
-
 # PHP-ChildProcess
 
-一个CLI下易用简单的管理进程的库
+    This is a library for PHPer to handle Child Process easy and simple. That's it.
 
-# 安装
+# Dependencies
 
-添加 `"pagon/childprocess": "*"` 到 [`composer.json`](http://getcomposer.org):
+- php5.3+
+- pcntl
+- posix
+- [pagon/eventemitter](https://github.com/hfcorriez/php-eventemitter)
+
+# Install
+
+add `"pagon/childprocess": "*"` to you `composer.json`:
 
 ```
 composer.phar install
 ```
 
-# 目录
+# Overview
 
-- [使用ChildProcess](#childprocess-manager)
-- [创建子进程](#create-child-process)
-  - [平行运行](#parallel-works)
-    - [自动运行](#automatic-run)
-    - [手动运行](#manually-run)
-    - [手动运行等待](#manually-join)
-  - [通过PHP文件Fork](#fork-php-file)
-  - [发送消息](#send-message)
-  - [Spawn命令](#spawn-the-command)
-  - [高级用法](#advance-usage)
-- [事件](#events)
+- [Use ChildProcess](#childprocess-manager)
+- [Create Child Process](#create-child-process)
+  - [Parallel works with closure](#parallel-works)
+    - [Automatic Run](#automatic-run)
+    - [Manually Run](#manually-run)
+    - [Manually Join](#manually-join)
+  - [Fork PHP file](#fork-php-file)
+  - [Send message](#send-message)
+  - [Spawn the command](#spawn-the-command)
+  - [Advance usage](#advance-usage)
+- [Events](#events)
   - [ChildProcess](#manager-events)
   - [Process](#process-events)
 
@@ -32,7 +37,7 @@ composer.phar install
 
 ## ChildProcess Manager
 
-控制当前进程
+    Current process handle
 
 ```php
 declare(ticks = 1) ;
@@ -44,14 +49,14 @@ $manager->on('exit', function () use ($master) {
     exit;
 });
 
-// 做其他事情或等待
+// To do something
 ```
 
 ## Create Child Process
 
 ### Parallel Works
 
-在子平行空间运行闭包函数
+    Run the callable function in parallel child process space
 
 #### Automatic run
 
@@ -62,11 +67,9 @@ $manager = new ChildProcess();
 
 $child = $manager->parallel(function () {
     sleep(10);
-    // 做其他事情
+    // to do something
 });
 ```
-
-> 如果子进程正在工作，主进程退出，那将没法来handle事件
 
 #### Manually Run
 
@@ -117,7 +120,7 @@ $child->join();
 
     Run the PHP file in parallel child process space
 
-主进程：
+The Master:
 
 ```php
 declare(ticks = 1) ;
@@ -133,7 +136,7 @@ $child->on('exit', function ($status) {
 $child->join();
 ```
 
-PHP文件：
+The Fork PHP file:
 
 ```php
 $master // The parent process
@@ -143,7 +146,7 @@ $child  // Current process
 
 ### Send message
 
-父子进程可以使用消息来通信
+    Message communicate between parent process and child process
 
 ```php
 declare(ticks = 1) ;
@@ -175,7 +178,7 @@ $child->join();
 
 ### Spawn the command
 
-在子进程运行命令，并且捕获输出
+    Run the command in child process
 
 ```php
 declare(ticks = 1) ;
@@ -199,9 +202,9 @@ $child->join();
 
 ### Advance usage
 
-设置选项
+    Setting options
 
-当前支持的选项列表：
+Current setting supported:
 
 ```php
 array(
@@ -214,7 +217,7 @@ array(
 )
 ```
 
-一些用法：
+Some usage:
 
 ```php
 declare(ticks = 1) ;
@@ -248,19 +251,19 @@ $manager->on('tick', function(){
 
 ### Manager Events
 
-- `tick`      每个tick都会触发，主要用于监控一些行为来及时反馈到管理器
-- `listen`    监听消息队列
-- `exit`      进程退出
-- `quit`      收到SIGQUIT信号
-- `signal`    收到任何的信号
+- `tick`      Every tick will trigger this
+- `listen`    Listen the message
+- `exit`      When process is exit
+- `quit`      When SIGQUIT received
+- `signal`    When signal received, All
 
 ### Process Events
 
-- `listen`    当管理器开始监听队列时触发
-- `exit`      当退出时
-- `run`       当手动运行时
-- `init`      当子进程创建完成时
-- `fork`      当fork时
+- `listen`    When manager listen the message queue, run in master
+- `exit`      When exit, run in master
+- `run`       When process run in child, run in master
+- `init`      When child process created, run in master
+- `fork`      When fork, run in master
 
 # License
 
