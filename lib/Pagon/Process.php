@@ -103,7 +103,7 @@ class Process extends EventEmitter
         // Create tick function register to master
         $tick = function () use ($that) {
             // Check queue
-            if (!$that->manager && $that->queue) return;
+            if (!$that->manager || !$that->queue) return;
 
             if ($that->isMaster()) {
                 /**
