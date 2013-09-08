@@ -650,6 +650,8 @@ class ChildProcess extends EventEmitter
                         break;
                     }
 
+                    if (empty($that->children[$pid])) continue;
+
                     $that->children[$pid]->emit('finish', $status);
                     $that->children[$pid]->shutdown($status);
                     $that->clear($pid);

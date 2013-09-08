@@ -285,8 +285,8 @@ class Process extends EventEmitter
      */
     function __destruct()
     {
+        //$this->manager = null;
         $this->queue = null;
-        $this->manager = null;
         $this->listeners = array();
     }
 }
