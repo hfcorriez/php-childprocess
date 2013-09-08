@@ -290,7 +290,7 @@ class ChildProcess extends EventEmitter
         }
 
         while ($this->children) {
-            usleep(100);
+            usleep(100000);
         }
     }
 
