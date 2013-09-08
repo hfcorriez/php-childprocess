@@ -98,37 +98,37 @@ class Process extends EventEmitter
         // Set init
         $this->_init = true;
 
-        $that = $this;
+        $self = $this;
 
         // Create tick function register to master
-        $tick = function () use ($that) {
+        $tick = function () use ($self) {
             // Check queue
-            if (!$that->manager || !$that->queue) return;
+            if (!$self->manager || !$self->queue) return;
 
-            if ($that->isMaster()) {
+            if ($self->isMaster()) {
                 /**
                  * In master process, listen current process queue to send child
                  */
-                if (!msg_queue_exists($that->pid)) return;
-                $that->queue = msg_get_queue($that->pid);
+                if (!msg_queue_exists($self->pid)) return;
+                $self->queue = msg_get_queue($self->pid);
             } else {
                 /**
                  * In sub process, listen the parent process to send master
                  */
-                if (!msg_queue_exists($that->ppid)) return;
-                $that->queue = msg_get_queue($that->ppid);
+                if (!msg_queue_exists($self->ppid)) return;
+                $self->queue = msg_get_queue($self->ppid);
             }
 
-            $that->emit('listen');
-            $that->listened = true;
+            $self->emit('listen');
+            $self->listened = true;
         };
 
         // Register to tick
         $this->manager->on('tick', $tick);
 
         // When child process exit remove this
-        $this->on('exit', function () use ($that, $tick) {
-            $that->manager->removeListener('tick', $tick);
+        $this->on('exit', function () use ($self, $tick) {
+            $self->manager->removeListener('tick', $tick);
         });
 
         return $this;
@@ -172,9 +172,9 @@ class Process extends EventEmitter
     /**
      * Join for wait process exit
      */
-    public function join()
+    public function wait()
     {
-        $this->manager->join();
+        $this->manager->wait();
     }
 
     /**

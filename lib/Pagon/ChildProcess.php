@@ -207,7 +207,7 @@ class ChildProcess extends EventEmitter
         // Files to descriptor
         $files = array();
         // Self
-        $that = $this;
+        $self = $this;
 
         // Define the stdin stdout and stderr files
         foreach ($types as $type) {
@@ -240,7 +240,7 @@ class ChildProcess extends EventEmitter
             exit;
         }, $options, $start);
 
-        $child->on('fork', function () use (&$files, $child, $types, $that) {
+        $child->on('fork', function () use (&$files, $child, $types, $self) {
             // Make file descriptor
             $pipes = array();
             foreach ($files as $i => $file) {
@@ -265,11 +265,11 @@ class ChildProcess extends EventEmitter
             };
 
             // Register tick function to check streams
-            $that->on('tick', $tick);
+            $self->on('tick', $tick);
 
             // Remove file when exit
-            $child->on('exit', function () use ($tick, $that, &$files, &$pipes) {
-                $that->removeListener('tick', $tick);
+            $child->on('exit', function () use ($tick, $self, &$files, &$pipes) {
+                $self->removeListener('tick', $tick);
                 foreach ($files as $file) {
                     unlink($file);
                 }
@@ -283,7 +283,7 @@ class ChildProcess extends EventEmitter
     /**
      * Join
      */
-    public function join()
+    public function wait()
     {
         foreach ($this->prepared_children as $child) {
             $child->run();
@@ -475,9 +475,9 @@ class ChildProcess extends EventEmitter
     protected function childSetTimeout($timeout)
     {
         $start_time = time();
-        $that = $this;
-        $this->on('tick', function () use ($timeout, $start_time, $that) {
-            if ($start_time + $timeout < time()) $that->shutdown(1);
+        $self = $this;
+        $this->on('tick', function () use ($timeout, $start_time, $self) {
+            if ($start_time + $timeout < time()) $self->shutdown(1);
         });
     }
 
@@ -615,20 +615,20 @@ class ChildProcess extends EventEmitter
      */
     protected function registerShutdownHandlers()
     {
-        $that = $this;
-        register_shutdown_function(function () use ($that) {
+        $self = $this;
+        register_shutdown_function(function () use ($self) {
             if (($error = error_get_last()) && in_array($error['type'], array(E_PARSE, E_ERROR, E_USER_ERROR))) {
-                $that->shutdown(1, $error);
+                $self->shutdown(1, $error);
             } else {
-                $that->emit('finish', 0);
-                $that->shutdown();
+                $self->emit('finish', 0);
+                $self->shutdown();
             }
 
-            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
+            if (!is_resource($self->queue) || !msg_stat_queue($self->queue)) {
                 return;
             }
 
-            msg_remove_queue($that->queue);
+            msg_remove_queue($self->queue);
         });
     }
 
@@ -637,48 +637,48 @@ class ChildProcess extends EventEmitter
      */
     protected function registerTickHandlers()
     {
-        $that = $this;
-        register_tick_function(function () use ($that) {
-            if (!$that->prepared) {
+        $self = $this;
+        register_tick_function(function () use ($self) {
+            if (!$self->prepared) {
                 return;
             }
 
-            if ($that->master) {
+            if ($self->master) {
                 while ($pid = pcntl_wait($status, WNOHANG)) {
                     if ($pid === -1) {
                         pcntl_signal_dispatch();
                         break;
                     }
 
-                    if (empty($that->children[$pid])) continue;
+                    if (empty($self->children[$pid])) continue;
 
-                    $that->children[$pid]->emit('finish', $status);
-                    $that->children[$pid]->shutdown($status);
-                    $that->clear($pid);
+                    $self->children[$pid]->emit('finish', $status);
+                    $self->children[$pid]->shutdown($status);
+                    $self->clear($pid);
                 }
             }
 
-            $that->emit('tick');
+            $self->emit('tick');
 
-            if (!is_resource($that->queue) || !msg_stat_queue($that->queue)) {
+            if (!is_resource($self->queue) || !msg_stat_queue($self->queue)) {
                 return;
             }
 
-            while (msg_receive($that->queue, 1, $null, 1024, $msg, true, MSG_IPC_NOWAIT, $error)) {
-                if (!is_array($msg) || empty($msg['to']) || $msg['to'] != $that->pid) {
-                    $that->emit('unknown_message', $msg);
+            while (msg_receive($self->queue, 1, $null, 1024, $msg, true, MSG_IPC_NOWAIT, $error)) {
+                if (!is_array($msg) || empty($msg['to']) || $msg['to'] != $self->pid) {
+                    $self->emit('unknown_message', $msg);
                 } else {
-                    if ($that->master) {
-                        if (!empty($that->children[$msg['from']])
-                            && ($process = $that->children[$msg['from']])
+                    if ($self->master) {
+                        if (!empty($self->children[$msg['from']])
+                            && ($process = $self->children[$msg['from']])
                         ) {
                             $process->emit('message', $msg['body']);
                         } else {
-                            $that->emit('unknown_message', $msg);
+                            $self->emit('unknown_message', $msg);
                         }
-                    } else if ($msg['from'] == $that->ppid) {
+                    } else if ($msg['from'] == $self->ppid) {
                         // Come from parent process
-                        $that->process->emit('message', $msg['body']);
+                        $self->process->emit('message', $msg['body']);
                     }
                 }
             }
