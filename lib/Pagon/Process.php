@@ -66,6 +66,7 @@ class Process extends EventEmitter
     {
         $this->pid = $pid;
         $this->ppid = $ppid;
+        $this->queue = msg_get_queue($pid);
         $this->manager = $child_process;
 
         if ($this->pid) {
